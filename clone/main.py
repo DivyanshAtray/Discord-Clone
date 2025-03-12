@@ -38,6 +38,11 @@ def home():
     return render_template("login_page.html")
 
 
+@app.route('/chatroom')
+def chatroom():
+    return render_template('chatroom.html')
+
+
 @app.route("/submit", methods=["POST"])
 def submit_form():
     conn = None

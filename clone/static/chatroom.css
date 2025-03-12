@@ -1,0 +1,195 @@
+*{
+    padding: 0;
+    margin: 0;
+}
+
+
+::-webkit-scrollbar {
+    width: 8px; /* Width of vertical scrollbar */
+    height: 8px; /* Height of horizontal scrollbar */
+    border-radius: 100%;
+}
+
+/* Track (background of scrollbar) */
+::-webkit-scrollbar-track {
+    background: #2f3136; /* Dark background */
+    border-radius: 10px;
+}
+
+/* Handle (scroll thumb) */
+::-webkit-scrollbar-thumb {
+    background: #5865F2; /* Discord-like blue */
+    border-radius: 10px;
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+    background: #4752C4;
+}
+
+/* Optional: Scrollbar for Firefox */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #5865F2 #2f3136;
+}
+
+
+.main{
+    display: flex;
+    flex-direction: row;
+}
+
+.sidebar{
+    height: 100dvh;
+    width: 250px;
+    background-color: #2b2d31;
+    overflow: auto;
+}
+
+p{
+    color: #babcc0;
+    font-family: "Noto Sans", sans-serif;
+    font-size: small;
+    padding-top: 15px;
+    padding-bottom: 20px;
+    padding-left: 10px;
+    cursor: none;
+}
+
+.dms{
+    padding-left: 20px;
+    display: flex;
+    flex-direction: column;
+    height: 90dvh;
+    /* justify-content: space-around; */
+}
+
+span{
+    /* margin-top: 20px; */
+    color: #babcc0;
+    font-family: "Noto Sans", sans-serif;
+    display: flex;
+    align-items: center;
+    height: 60px;
+    font-size: large;
+    font-weight: 500;
+}
+span:hover{
+    cursor: pointer;
+    background-color: #404249;
+    border-radius: 4px;
+}
+
+img{
+    width: 40px;
+    border-radius: 100%;
+    height: 40px;
+    margin-right: 20px;
+}
+
+.chat{
+    background-color: #313338;
+    width: 60vw;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.name{
+    margin-left:  20px;
+}
+
+.name:hover{
+    background-color: #313338;
+    border-radius: 0px;
+}
+
+hr {
+    border: none;
+    height: 1px;
+    background-color: rgba(204, 204, 204, 0.541);
+    width: 60%;
+}
+
+.messages{
+    margin-top: 20px;
+    height: 80dvh;
+    width: 60vw;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    /* margin-right: 30px;
+    margin-left: 30px; */
+}
+
+input{
+    width: 50vw;
+    height: 40px;
+    padding-left: 20px;
+    padding-right: 40px;
+    font-size: medium;
+    border-radius: 3px;
+    border: none;
+    /* margin-top: 20px; */
+    background-color: #383a40;
+    stroke: none;
+    color: #dadada;
+}
+
+.inputbar{
+    margin-top: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    position: relative;
+    display: inline-block;
+}
+
+.material-symbols-outlined{
+    color: #dadada;
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+}
+
+
+.message {
+    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+    font-size: large;
+    min-width: 30px;
+    max-width: 60%;
+    background-color: #292b30; /* Discord-like color */
+    color: white;
+    margin-right: 30px;
+    margin-left: 30px;
+    padding: 10px 15px;
+    border-radius: 10px;
+    font-size: 14px;
+    align-self: flex-end; /* Aligns messages to the right */
+    word-wrap: break-word;
+    /* box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2); */
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Optional: Style for received messages (if needed later) */
+.message.received {
+    align-self: flex-start;
+    background-color: #4a4a4a;
+}
+
+/* Smooth fade-in effect */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
