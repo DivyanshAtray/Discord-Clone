@@ -15,6 +15,12 @@
     <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=send" />
 
+        <script defer src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+        <script defer id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+
+        
+
 </head>
 
 <body>
@@ -22,19 +28,19 @@
         <div class="sidebar">
             <p>DIRECT MESSAGES</p>
             <div class="dms">
-                <span><img
+                <span><img class="pfp"
                         src="https://images.saymedia-content.com/.image/t_share/MTkyOTkyMzE2OTQ3MDQ3NjQ1/website-background-templates.png"
                         alt="">Will</span>
-                <span><img
+                <span><img class="pfp"
                         src="https://cdn.discordapp.com/avatars/795495556494393375/3c479a883b31eb44fd5c75212ab5c9b1.webp?size=80"
                         alt="">Be</span>
-                <span><img
+                <span><img class="pfp"
                         src="https://cdn.discordapp.com/avatars/782241155407675413/a8475efacaab1b9898f91fa8e5c2c22a.webp?size=80"
                         alt="">Taken</span>
-                <span><img
+                <span><img class="pfp"
                         src="https://cdn.discordapp.com/avatars/617037497574359050/a_9867e32bb8659beeca69eba2fc785111.gif?size=80"
                         alt="">From</span>
-                <span><img
+                <span><img class="pfp"
                         src="https://cdn.discordapp.com/avatars/761149419701534720/7fcaafb35c738233de8296a96a27a4ca.webp?size=80"
                         alt="">Database</span>
             </div>
@@ -42,44 +48,128 @@
 
         <div class="chat">
 
-            <span class="name"><img src="https://cdn.discordapp.com/avatars/795495556494393375/3c479a883b31eb44fd5c75212ab5c9b1.webp?size=80" alt="">Friend's Name</span> <hr>
+            <span class="name"><img class="pfp" src="https://cdn.discordapp.com/avatars/795495556494393375/3c479a883b31eb44fd5c75212ab5c9b1.webp?size=80" alt="">Friend's Name</span> <hr>
 
             <div class="messages"></div>
 
             <div class="inputbar">
-                <input type="text" id="messageInput" placeholder="Message...">
+                <textarea type="text" id="messageInput" placeholder="Message..."></textarea>
                 <div class="material-symbols-outlined" id="sendButton">send</div>
+                <img class="emoji" src="/static/emoji.svg" alt="Emoji">
+
             </div>
         </div>
     </div>
 
     <script>
-        const inputField = document.getElementById("messageInput");
-        const sendButton = document.getElementById("sendButton");
-        const messagesContainer = document.querySelector(".messages");
+       const inputField = document.getElementById("messageInput");
+const sendButton = document.getElementById("sendButton");
+const messagesContainer = document.querySelector(".messages");
+const MAX_HEIGHT = 200; // Max textarea height in pixels
 
-        function sendMessage() {
-            const messageText = inputField.value.trim();
-            if (messageText === "") return; // Prevent empty messages
+function sendMessage() {
+    const messageText = inputField.value.trim();
+    if (messageText === "") return; // Prevent empty messages
 
-            const messageDiv = document.createElement("div");
-            messageDiv.classList.add("message");
-            messageDiv.textContent = messageText;
+    const messageDiv = document.createElement("div");
+    messageDiv.classList.add("message");
 
-            messagesContainer.appendChild(messageDiv);
-            inputField.value = ""; // Clear input field
-            messagesContainer.scrollTop = messagesContainer.scrollHeight; // Auto-scroll to bottom
+    let formattedMessage = messageText
+        .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>") // Bold: **text**
+        .replace(/\*(.+?)\*/g, "<i>$1</i>");   // Italic: *text*
+
+    // Convert ```code``` blocks into highlighted <pre><code> elements with copy button
+    formattedMessage = formattedMessage.replace(/```([\s\S]+?)```/g, (match, code) => {
+        const randomClass = "code-theme-" + Math.floor(Math.random() * 5); // Random theme class
+        return `
+            <div class="code-block ${randomClass}">
+                <pre><code>${escapeHtml(code)}</code></pre>
+                <button class="copy-btn" onclick="copyToClipboard(this)">📋</button>
+            </div>
+        `;
+    });
+
+    messageDiv.innerHTML = formattedMessage;
+    messagesContainer.appendChild(messageDiv);
+    inputField.value = ""; // Clear input
+    messagesContainer.scrollTop = messagesContainer.scrollHeight; // Auto-scroll to bottom
+    autoResizeTextarea(inputField); // Reset height
+
+    // Render LaTeX expressions inside code blocks
+    renderLatex();
+}
+
+
+// Escape HTML to prevent injection attacks
+function escapeHtml(text) {
+    return text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// Copy code content to clipboard
+// Copy code content to clipboard
+function copyToClipboard(button) {
+    const codeBlock = button.previousElementSibling;
+    const code = codeBlock.textContent.trim();
+
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(code).then(() => {
+            button.textContent = "✔ Copied!";
+            setTimeout(() => (button.textContent = "📋"), 2000);
+        }).catch(err => console.error("Failed to copy:", err));
+    } else {
+        // Fallback method for older browsers
+        const textarea = document.createElement("textarea");
+        textarea.value = code;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+
+        button.textContent = "✔ Copied!";
+        setTimeout(() => (button.textContent = "📋"), 2000);
+    }
+}
+
+
+// Render LaTeX using MathJax
+function renderLatex() {
+    if (window.MathJax) {
+        MathJax.typesetPromise();
+    }
+}
+
+// Auto-resizing textarea with max height limit
+function autoResizeTextarea(el) {
+    el.style.height = "auto"; // Reset height first
+    const newHeight = el.scrollHeight;
+
+    if (newHeight > MAX_HEIGHT) {
+        el.style.height = MAX_HEIGHT + "px";
+        el.style.overflowY = "scroll"; // Enable scrolling when max height is reached
+    } else {
+        el.style.height = newHeight + "px";
+        el.style.overflowY = "hidden"; // Hide scrollbar when below max height
+    }
+}
+
+// Adjust height when user types
+inputField.addEventListener("input", function () {
+    autoResizeTextarea(this);
+});
+
+// Prevent Enter from sending the message if Shift is held
+inputField.addEventListener("keydown", function (event) {
+    if (event.key === "Enter") {
+        if (!event.shiftKey) {
+            event.preventDefault(); // Prevent new line
+            sendMessage();
         }
+    }
+});
 
-        // Send message on button click
-        sendButton.addEventListener("click", sendMessage);
+// Set initial height
+autoResizeTextarea(inputField);
 
-        // Send message on Enter key press
-        inputField.addEventListener("keydown", function (event) {
-            if (event.key === "Enter") {
-                sendMessage();
-            }
-        });
     </script>
 
 </body>
