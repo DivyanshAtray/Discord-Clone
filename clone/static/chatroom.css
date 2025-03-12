@@ -1,4 +1,4 @@
-*{
+```*{
     padding: 0;
     margin: 0;
 }
@@ -41,7 +41,7 @@
 
 .sidebar{
     height: 100dvh;
-    width: 250px;
+    width: 20vw;
     background-color: #2b2d31;
     overflow: auto;
 }
@@ -52,8 +52,8 @@ p{
     font-size: small;
     padding-top: 15px;
     padding-bottom: 20px;
-    padding-left: 10px;
-    cursor: none;
+    padding-left: 8px;
+    cursor: pointer;
 }
 
 .dms{
@@ -71,7 +71,7 @@ span{
     display: flex;
     align-items: center;
     height: 60px;
-    font-size: large;
+    font-size: medium;
     font-weight: 500;
 }
 span:hover{
@@ -89,7 +89,7 @@ img{
 
 .chat{
     background-color: #313338;
-    width: 60vw;
+    width: 100vw;
     height: 100dvh;
     display: flex;
     flex-direction: column;
@@ -115,7 +115,7 @@ hr {
 .messages{
     margin-top: 20px;
     height: 80dvh;
-    width: 60vw;
+    width: 80vw;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
@@ -162,6 +162,7 @@ input{
     font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
     font-size: large;
     min-width: 30px;
+    margin-right: 20px;
     max-width: 60%;
     background-color: #292b30; /* Discord-like color */
     color: white;
@@ -193,3 +194,4 @@ input{
         transform: translateY(0);
     }
 }
+```
