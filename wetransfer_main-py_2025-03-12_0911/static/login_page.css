@@ -1,0 +1,198 @@
+*{
+    margin: 0;
+    padding: 0;
+}
+
+body{
+    background-image: url('/static/bg.svg');
+    background-repeat: no-repeat;
+    background-size: 100%;
+    background-position: center top;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.main{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100dvh;
+}
+
+.box{
+    display: flex;
+    justify-content: space-between;
+    background-color: #313338;
+    color: #b0b6bd;
+    font-family: "Noto Sans", sans-serif;
+    font-size: medium;
+    font-weight: 500;
+    width: 600px;
+    height: 450px;
+}
+
+form{
+    /* background-color: #313338;
+    color: #b0b6bd;
+    font-family: "Noto Sans", sans-serif;
+    font-size: medium;
+    font-weight: 500;
+    width: 600px;
+    height: 300px; */
+    /* display: flex;
+    flex-direction: column; */
+    padding-left: 20px;
+    padding-top: 20px;
+    
+}
+
+form p:nth-of-type(1){
+    padding-left: 80px;
+}
+
+
+form p:nth-of-type(2) {
+    padding-bottom: 20px;
+    padding-left: 50px;
+}
+
+
+p{
+    color: white;
+    font-size: x-large;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+.sec{
+    color: white;
+    font-size: medium;
+    font-weight: 300;
+}
+input{
+    background-color: #1e1f22;
+    height: 30px;
+    width: 280px;
+    border: none;
+    border-radius: 3px;
+    color: whitesmoke;
+    padding: 0px 10px;
+    font-size: medium;
+}
+
+#togglePassword {
+    cursor: pointer;
+    color: white; /* Change eye color */
+    font-size: 18px;
+}
+
+.password-container {
+    position: relative;
+    display: inline-block;
+}
+
+.password-container input {
+    padding-right: 40px; 
+    width: 280px;
+    height: 30px;
+    background-color: #1e1f22;
+    border: none;
+    border-radius: 3px;
+    color: whitesmoke;
+    padding: 0px 10px;
+    font-size: medium;
+}
+
+.password-container .material-symbols-outlined {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: white;
+    font-size: 22px;
+    transition: color 0.3s;
+}
+
+/* Change icon color when toggled */
+.password-container .active {
+    color: gray;
+}
+
+input[type="file"]::file-selector-button {
+    background-color: #5865f2; /* Change button color */
+    color: white; /* Change text color */
+    border: none;
+    margin-top: 5px;
+    border-radius: 5px;
+    cursor: pointer;
+    /* font-size: 14px; */
+}
+
+button{
+    width: 300px;
+    height: 30px;
+    background-color: #5865f2;
+    color: #dbdefc;
+    border: none;
+    border-radius: 3px;
+    margin-top: 20px;
+    font-size: large;
+    cursor: pointer;
+}
+
+.left{
+    display: flex;
+    flex-direction: column;
+    justify-content:center;
+    align-items: center;
+    padding-right: 20px;
+}
+
+img{
+    width: 150px;
+    border-radius: 3px;
+    height: auto;
+    padding-bottom: 5px;
+}
+
+
+
+
+
+
+@media (max-width: 1340px) {
+    body{
+        background-size: 120%;
+    }
+}
+
+
+@media (max-width: 1100px) {
+    body{
+        background-size: 150%;
+    }
+}
+
+@media (max-width: 860px) {
+    body{
+        background-size: 250%;
+        background-position: right top;
+    }
+}
+
+
+@media (max-width: 580px) {
+    body{
+        background-size: 350%;
+        background-position: center top;
+        background-repeat: repeat-y;
+    }
+
+    .left{
+        display: none;
+    }
+}
+
+

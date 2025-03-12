@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord</title>
+    <link rel="stylesheet" href="/static/login_page.css">
+
+    <!-- Google Material Symbols for Eye Icon -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+
+    <!-- Display Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-messages">
+        {% for category, message in messages %}
+        <div class="flash-message {{ category }}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <div class="main">
+
+        <div class="box">
+            <form action="/submit" method="post">
+                <p>Welcome!</p>
+                <p class="sec">We are excited to see you!</p>
+
+                <label for="username">Username*</label><br>
+                <input type="text" id="username" name="username" required><br><br>
+
+                <label for="password">Password*</label><br>
+                <div class="password-container">
+                    <input type="password" id="password" name="password" required>
+                    <span id="togglePassword" class="material-symbols-outlined">visibility</span>
+                </div>
+                <br><br>
+
+                <label for="image1">Upload pfp:</label><br>
+                <input type="file" id="image1" name="image1" accept="image/gif, image/png, image/jpeg"><br><br>
+
+                <label for="image2">Upload banner:</label><br>
+                <input type="file" id="image2" name="image2" accept="image/gif, image/png, image/jpeg"><br>
+
+                <button type="submit">Login</button>
+            </form>
+            <div class="left">
+                <img src="https://qr.io/qr-svg/zhJMHD.svg?1741709233933" alt="">
+                <p>Login with QR code</p>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>
+
+<script>
+    // Password Toggle
+    const passwordField = document.getElementById("password");
+    const togglePassword = document.getElementById("togglePassword");
+
+    togglePassword.addEventListener("click", function () {
+        if (passwordField.type === "password") {
+            passwordField.type = "text";
+            this.textContent = "visibility_off"; // Change icon when active
+            this.style.color = "gray";
+        } else {
+            passwordField.type = "password";
+            this.textContent = "visibility"; // Change icon back
+            this.style.color = "white";
+        }
+    });
+
+    // Dismiss success messages after 3 seconds
+    setTimeout(() => {
+        document.querySelectorAll(".flash-message.success").forEach(msg => {
+            msg.remove();
+        });
+    }, 3000);
+
+    // Reduce opacity when error message appears
+    const errorMsg = document.querySelector(".flash-message.error");
+    const mainContent = document.querySelector(".main");
+    const bodyContent = document.body;
+
+
+    if (errorMsg) {
+        mainContent.style.opacity = "0.5"; // Reduce opacity
+    }
+
+    // Restore opacity when error message is dismissed
+    document.addEventListener("click", function (event) {
+        if (errorMsg && !errorMsg.contains(event.target)) {
+            errorMsg.remove();
+            mainContent.style.opacity = "1"; // Restore opacity
+        }
+    });
+</script>
+
+<style>
+    /* Flash Messages */
+    .flash-message {
+        padding: 15px;
+        color: white;
+        font-size: 16px;
+        font-weight: bold;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: opacity 0.3s ease-in-out;
+    }
+
+    /* Error Messages (Centered) */
+    .flash-message.error {
+        background-color: #211e22;
+        color: aliceblue;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: large;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 50%;
+        max-width: 400px;
+        text-align: center;
+        z-index: 1000;
+    }
+
+    /* Success Messages (Notification Style) */
+    .flash-message.success {
+        display: none;
+        
+    }
+
+    /* Reduce opacity when error message appears */
+    .main {
+        transition: opacity 0.3s ease-in-out;
+    }
+</style>
