@@ -79,8 +79,7 @@ def submit_form():
         if conn:
             conn.close()  # Ensure the connection is always closed
 
-    return "Login information registered successfully!"
-
+    return redirect("/chatroom")
 
 
 # Run the Flask app
