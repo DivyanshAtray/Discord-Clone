@@ -41,7 +41,7 @@ if not os.path.exists(db_path):
     conn.close()
 
 # File upload configurations
-UPLOAD_FOLDER = os.path.join(dirname, "/uploads")
+UPLOAD_FOLDER = os.path.join(dirname, "uploads")
 
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
