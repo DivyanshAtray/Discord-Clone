@@ -6,6 +6,7 @@
 body{
     background-image: url('/static/bg.svg');
     background-repeat: no-repeat;
+    background-repeat: repeat-y;
     background-size: 100%;
     background-position: center top;
     overflow: hidden;
@@ -165,6 +166,7 @@ img{
 @media (max-width: 1340px) {
     body{
         background-size: 120%;
+        background-position: center top;
     }
 }
 
@@ -172,22 +174,32 @@ img{
 @media (max-width: 1100px) {
     body{
         background-size: 150%;
+        background-position: center top;
     }
 }
 
 @media (max-width: 860px) {
     body{
         background-size: 250%;
-        background-position: right top;
+        background-position: center top;
     }
 }
 
 
-@media (max-width: 580px) {
+@media (max-width: 595px) {
     body{
         background-size: 350%;
         background-position: center top;
         background-repeat: repeat-y;
+    }
+
+    .box{
+        width: 350px;
+        /* justify-content: center; */
+    }
+
+    .form{
+        padding-left: 0px;
     }
 
     .left{
