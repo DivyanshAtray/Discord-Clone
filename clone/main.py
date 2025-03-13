@@ -1,14 +1,21 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
-import sqlite3
+import urllib
+
+from flask import Flask, render_template, request, session, flash, redirect, url_for, jsonify
+from flask_socketio import SocketIO, emit
 import os
 import random
-import string
+import string,sqlite3
 
 app = Flask(__name__)
-app.secret_key = "your_secret_key"  # Used for sessions (keep it secure)
+app.secret_key = "your_secret_key"
+socketio = SocketIO(app,cors_allowed_origins="*")
+
+# Dictionary to track connected users (optional)
+connected_users = {}
 
 # Ensure the 'db.db' exists
-db_path = "db.db"
+dirname = os.path.dirname(__file__)
+db_path = os.path.join(dirname, "db.db")
 if not os.path.exists(db_path):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
@@ -34,7 +41,8 @@ if not os.path.exists(db_path):
     conn.close()
 
 # File upload configurations
-UPLOAD_FOLDER = 'uploads'
+UPLOAD_FOLDER = os.path.join(dirname, "/uploads")
+
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER  # Set upload folder
@@ -46,10 +54,22 @@ def generate_random_string(length=10):
     return ''.join(random.choices(chars, k=length))
 
 
-@app.route('/')
+
+@socketio.on("connect")
+def handle_connect():
+    # Handle a user connection
+    print("A user connected")
+    print(connected_users)
+
+
+@socketio.on("disconnect")
+def handle_disconnect():
+    # Remove a user from the connected users (if needed)
+    print("A user disconnected")
+
+@app.route('/login')
 def login_page():
     return render_template('login_page.html')
-
 
 @app.route('/submit', methods=['POST'])
 def submit():
@@ -88,14 +108,43 @@ def submit():
 
 
 
-@app.route('/chatroom')
+@app.route('/')
 def chatroom():
     # Check if user is logged in
     if 'username' not in session:
-        flash("Please log in to access the chatroom.", "warning")
+        flash("Please log in to access the chatroom.", "danger")
         return redirect(url_for('login_page'))
 
     return render_template('chatroom.html', username=session['username'])
+
+
+@app.route('/get_username', methods=['GET'])
+def get_username():
+    username = session.get('username')  # Retrieve the username from the session
+    if username:
+        return jsonify({"username": username})
+    else:
+        return jsonify({"error": "No username found"}), 401
+
+
+@socketio.on("send_message")
+def handle_send_message(data):
+    print(data)
+    """
+    Handle incoming messages from users.
+    Data format (example):
+    {
+        "username": "user1",
+        "message": "Hello, everyone!"
+    }
+    """
+
+    username = data["username"]
+    message = data["message"]
+    print(f"{username}: {message}")
+
+    # Broadcast the received message to all clients
+    emit("broadcast_message", {"username": username, "message": message}, broadcast=True)
 
 
 @app.route('/send_message', methods=['POST'])
@@ -124,8 +173,8 @@ def send_message():
                    (username, message, new_file_name))
     conn.commit()
     conn.close()
-    return jsonify({"response": "gay"})
+    return jsonify({"status": "success"})
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    socketio.run(app, debug=True,allow_unsafe_werkzeug=True)
