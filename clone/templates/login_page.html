@@ -41,7 +41,7 @@
                 <label for="username">Username*</label><br>
                 <input type="text" id="username" name="username" required><br><br>
 
-                <label for="password">Password*</label><br>
+                <label for="password">Password</label><br>
                 <div class="password-container">
                     <input type="password" id="password" name="password" required>
                     <span id="togglePassword" class="material-symbols-outlined">visibility</span>
@@ -51,7 +51,7 @@
                 <label for="image1">Upload pfp:</label><br>
                 <input type="file" id="image1" name="image1" accept="image/gif, image/png, image/jpeg"><br><br>
 
-                <label for="image2">Upload banner:</label><br>
+                <label for="image2">Upload banner:*</label><br>
                 <input type="file" id="image2" name="image2" accept="image/gif, image/png, image/jpeg"><br>
 
                 <a href="{{ url_for('chatroom') }}"><button type="submit">Login</button></a>

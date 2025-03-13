@@ -25,7 +25,7 @@
             <p>DIRECT MESSAGES</p>
             <div class="dms">
                 <span><img class="pfp" src="https://images.saymedia-content.com/.image/t_share/MTkyOTkyMzE2OTQ3MDQ3NjQ1/website-background-templates.png" alt="">Will</span>
-                <span><img class="pfp" src="https://cdn.discordapp.com/avatars/795495556494393375/3c479a883b31eb44fd5c75212ab5c9b1.webp?size=80" alt="">Be</span>
+                <span><img class="pfp" src="" alt="">Be</span>
                 <span><img class="pfp"
                     src="https://cdn.discordapp.com/avatars/782241155407675413/a8475efacaab1b9898f91fa8e5c2c22a.webp?size=80"
                     alt="">Taken</span>
@@ -62,39 +62,48 @@
 
         function sendMessage() {
             const messageText = inputField.value.trim();
+
+            // Check if there is no message text and no selected file, then return.
             if (messageText === "" && !selectedFile) return;
 
             const userMessageDiv = document.createElement("div");
             userMessageDiv.classList.add("message", "user-message");
 
+            const formData = new FormData(); // Create FormData object for API request
             if (selectedFile) {
+                // Add file to FormData
+                formData.append("file", selectedFile);
+
+                // Show file upload preview in the chat
                 const fileURL = URL.createObjectURL(selectedFile);
-                userMessageDiv.innerHTML = `<a href="${fileURL}" target="_blank">${selectedFile.name}</a> <button onclick="downloadFile('${fileURL}', '${selectedFile.name}')">Download</button>`;
+                userMessageDiv.innerHTML = `<a href="${fileURL}" target="_blank">${selectedFile.name}</a>`;
                 selectedFile = null;
-            } else {
-                userMessageDiv.innerHTML = formatMessage(messageText);
             }
+
+            if (messageText !== "") {
+                formData.append("message", messageText); // Add message to FormData
+                userMessageDiv.innerHTML += formatMessage(messageText); // Append message to chat
+            }
+
             messagesContainer.appendChild(userMessageDiv);
 
+            // Send the FormData to the API endpoint
             fetch("/send_message", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message: messageText })
+                body: formData // FormData object includes both file and message
             })
             .then(response => response.json())
             .then(data => {
-                const botMessageDiv = document.createElement("div");
-                botMessageDiv.classList.add("message", "bot-message");
-                botMessageDiv.innerHTML = formatMessage(data.response);
-                messagesContainer.appendChild(botMessageDiv);
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                renderLatex();
+                console.log("Message sent successfully:", data);
             })
-            .catch(error => console.error("Error:", error));
+            .catch(error => {
+                console.error("Error sending message:", error);
+            });
 
+            // Clear input field after sending
             inputField.value = "";
-            autoResizeTextarea(inputField);
         }
+
 
         // Function to format messages (Bold, Italics, Code Blocks)
 function formatMessage(text) {
