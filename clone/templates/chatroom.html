@@ -54,7 +54,7 @@
 
             <div class="inputbar">
                 <textarea type="text" id="messageInput" placeholder="Message..."></textarea>
-                <div class="material-symbols-outlined" id="sendButton">send</div>
+                <img class="send" src="/static/send.svg" alt="Emoji">
                 <img class="emoji" src="/static/emoji.svg" alt="Emoji">
 
             </div>
@@ -62,115 +62,115 @@
     </div>
 
     <script>
-       const inputField = document.getElementById("messageInput");
-const sendButton = document.getElementById("sendButton");
-const messagesContainer = document.querySelector(".messages");
-const MAX_HEIGHT = 200; // Max textarea height in pixels
-
-function sendMessage() {
-    const messageText = inputField.value.trim();
-    if (messageText === "") return; // Prevent empty messages
-
-    const messageDiv = document.createElement("div");
-    messageDiv.classList.add("message");
-
-    let formattedMessage = messageText
-        .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>") // Bold: **text**
-        .replace(/\*(.+?)\*/g, "<i>$1</i>");   // Italic: *text*
-
-    // Convert ```code``` blocks into highlighted <pre><code> elements with copy button
-    formattedMessage = formattedMessage.replace(/```([\s\S]+?)```/g, (match, code) => {
-        const randomClass = "code-theme-" + Math.floor(Math.random() * 5); // Random theme class
-        return `
-            <div class="code-block ${randomClass}">
-                <pre><code>${escapeHtml(code)}</code></pre>
-                <button class="copy-btn" onclick="copyToClipboard(this)">📋</button>
-            </div>
-        `;
-    });
-
-    messageDiv.innerHTML = formattedMessage;
-    messagesContainer.appendChild(messageDiv);
-    inputField.value = ""; // Clear input
-    messagesContainer.scrollTop = messagesContainer.scrollHeight; // Auto-scroll to bottom
-    autoResizeTextarea(inputField); // Reset height
-
-    // Render LaTeX expressions inside code blocks
-    renderLatex();
-}
-
-
-// Escape HTML to prevent injection attacks
-function escapeHtml(text) {
-    return text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
-// Copy code content to clipboard
-// Copy code content to clipboard
-function copyToClipboard(button) {
-    const codeBlock = button.previousElementSibling;
-    const code = codeBlock.textContent.trim();
-
-    if (navigator.clipboard) {
-        navigator.clipboard.writeText(code).then(() => {
-            button.textContent = "✔ Copied!";
-            setTimeout(() => (button.textContent = "📋"), 2000);
-        }).catch(err => console.error("Failed to copy:", err));
-    } else {
-        // Fallback method for older browsers
-        const textarea = document.createElement("textarea");
-        textarea.value = code;
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand("copy");
-        document.body.removeChild(textarea);
-
-        button.textContent = "✔ Copied!";
-        setTimeout(() => (button.textContent = "📋"), 2000);
-    }
-}
-
-
-// Render LaTeX using MathJax
-function renderLatex() {
-    if (window.MathJax) {
-        MathJax.typesetPromise();
-    }
-}
-
-// Auto-resizing textarea with max height limit
-function autoResizeTextarea(el) {
-    el.style.height = "auto"; // Reset height first
-    const newHeight = el.scrollHeight;
-
-    if (newHeight > MAX_HEIGHT) {
-        el.style.height = MAX_HEIGHT + "px";
-        el.style.overflowY = "scroll"; // Enable scrolling when max height is reached
-    } else {
-        el.style.height = newHeight + "px";
-        el.style.overflowY = "hidden"; // Hide scrollbar when below max height
-    }
-}
-
-// Adjust height when user types
-inputField.addEventListener("input", function () {
-    autoResizeTextarea(this);
-});
-
-// Prevent Enter from sending the message if Shift is held
-inputField.addEventListener("keydown", function (event) {
-    if (event.key === "Enter") {
-        if (!event.shiftKey) {
-            event.preventDefault(); // Prevent new line
-            sendMessage();
+        const inputField = document.getElementById("messageInput");
+        const sendButton = document.querySelector(".send"); // Select the send image
+        const messagesContainer = document.querySelector(".messages");
+        const MAX_HEIGHT = 200; // Max textarea height in pixels
+    
+        function sendMessage() {
+            const messageText = inputField.value.trim();
+            if (messageText === "") return; // Prevent empty messages
+    
+            // User message (Right Side)
+            const userMessageDiv = document.createElement("div");
+            userMessageDiv.classList.add("message", "user-message");
+            userMessageDiv.innerHTML = formatMessage(messageText);
+            messagesContainer.appendChild(userMessageDiv);
+    
+            // Send message to backend
+            fetch("/send_message", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: messageText })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Bot message (Left Side)
+                const botMessageDiv = document.createElement("div");
+                botMessageDiv.classList.add("message", "bot-message");
+                botMessageDiv.innerHTML = formatMessage(data.response);
+                messagesContainer.appendChild(botMessageDiv);
+    
+                // Auto-scroll and render LaTeX
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                renderLatex();
+            })
+            .catch(error => console.error("Error:", error));
+    
+            inputField.value = "";
+            autoResizeTextarea(inputField);
         }
-    }
-});
-
-// Set initial height
-autoResizeTextarea(inputField);
-
+    
+        // Function to format messages (Bold, Italics, Code Blocks)
+        function formatMessage(text) {
+            return text
+                .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
+                .replace(/\*(.+?)\*/g, "<i>$1</i>")
+                .replace(/```([\s\S]+?)```/g, (match, code) => `
+                    <div class="code-block">
+                        <pre><code>${escapeHtml(code)}</code></pre>
+                        <button class="copy-btn" onclick="copyToClipboard(this)">📋</button>
+                    </div>
+                `);
+        }
+    
+        // Escape HTML to prevent injection
+        function escapeHtml(text) {
+            return text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+    
+        // Copy to Clipboard
+        function copyToClipboard(button) {
+            const codeBlock = button.previousElementSibling;
+            const code = codeBlock.textContent.trim();
+            navigator.clipboard.writeText(code)
+                .then(() => {
+                    button.textContent = "✔ Copied!";
+                    setTimeout(() => (button.textContent = "📋"), 2000);
+                })
+                .catch(err => console.error("Failed to copy:", err));
+        }
+    
+        // Render LaTeX
+        function renderLatex() {
+            if (window.MathJax) MathJax.typesetPromise();
+        }
+    
+        // Auto-resizing textarea with scrollbar
+        function autoResizeTextarea(el) {
+            el.style.height = "auto";
+            const newHeight = el.scrollHeight;
+    
+            if (newHeight > MAX_HEIGHT) {
+                el.style.height = MAX_HEIGHT + "px";
+                el.style.overflowY = "scroll"; // Enable scrollbar when max height is reached
+            } else {
+                el.style.height = newHeight + "px";
+                el.style.overflowY = "hidden"; // Hide scrollbar when below max height
+            }
+        }
+    
+        // Auto-resize on input
+        inputField.addEventListener("input", function () {
+            autoResizeTextarea(this);
+        });
+    
+        // Prevent Enter from sending message if Shift is held
+        inputField.addEventListener("keydown", function (event) {
+            if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        });
+    
+        // Click event for send button (fix applied here)
+        sendButton.addEventListener("click", sendMessage);
+    
+        // Set initial height
+        autoResizeTextarea(inputField);
     </script>
+    
+        
 
 </body>
 

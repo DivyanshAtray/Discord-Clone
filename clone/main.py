@@ -1,87 +1,60 @@
-from flask import Flask, request, render_template, redirect, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 import sqlite3
 import os
 
-# Initialize Flask App
 app = Flask(__name__)
-app.secret_key = "your_secret_key"  # Required for flash messages
+app.secret_key = "your_secret_key"
 
-# Database File
-DB_FILE = "users.db"
-
-
-# Ensure Database Exists
-def init_db():
-    if not os.path.exists(DB_FILE):
-        conn = sqlite3.connect(DB_FILE)
-        cursor = conn.cursor()
-        # Create `users` table
-        cursor.execute(
-            """CREATE TABLE users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT NOT NULL UNIQUE,
-                password TEXT NOT NULL,
-                profile_picture BLOB,
-                banner BLOB
-);"""
+# Ensure users.db exists
+db_path = "users.db"
+if not os.path.exists(db_path):
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            password TEXT NOT NULL,
+            image1 BLOB,
+            image2 BLOB
         )
-        conn.commit()
-        conn.close()
-        print("Database initialized.")
+    ''')
+    conn.commit()
+    conn.close()
 
+@app.route('/')
+def login_page():
+    return render_template('login_page.html')
 
-init_db()
+@app.route('/submit', methods=['POST'])
+def submit():
+    username = request.form['username']
+    password = request.form['password']
+    image1 = request.files['image1'].read() if 'image1' in request.files else None
+    image2 = request.files['image2'].read() if 'image2' in request.files else None
 
+    # Store in database
+    conn = sqlite3.connect("users.db")
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO users (username, password, image1, image2) VALUES (?, ?, ?, ?)",
+                   (username, password, image1, image2))
+    conn.commit()
+    conn.close()
 
-@app.route("/")
-def home():
-    return render_template("login_page.html")
-
+    flash("Login successful!", "success")
+    return redirect(url_for('chatroom'))
 
 @app.route('/chatroom')
 def chatroom():
     return render_template('chatroom.html')
 
+# API to process messages
+@app.route('/send_message', methods=['POST'])
+def send_message():
+    data = request.json  # Get JSON data
+    user_message = data.get("message", "")  # Extract message
+    response_message = user_message[::-1]  # Reverse the text
+    return jsonify({"response": response_message})  # Send JSON response
 
-@app.route("/submit", methods=["POST"])
-def submit_form():
-    conn = None
-    try:
-        # Get form data
-        username = request.form.get("username")
-        password = request.form.get("password")
-        profile_picture = request.form.get("image1")
-        banner = request.form.get("image2")
-
-        # Basic validation
-        if not username or not password:
-            flash("Username and password are required!", "error")
-            return redirect("/")
-
-        # Connect to the database
-        conn = sqlite3.connect(DB_FILE)
-        cursor = conn.cursor()
-
-        # Insert data into the database
-        cursor.execute(
-            "INSERT INTO users (username, password, profile_picture, banner) VALUES (?, ?, ?, ?)",
-            (username, password, profile_picture, banner),
-        )
-        conn.commit()
-        flash("Successfully registered!", "success")
-    except sqlite3.IntegrityError:
-        flash("This username is already taken. Please try again.", "error")
-        return redirect("/")
-    except Exception as e:
-        flash(f"An unexpected error occurred: {str(e)}", "error")
-        return redirect("/")
-    finally:
-        if conn:
-            conn.close()  # Ensure the connection is always closed
-
-    return redirect("/chatroom")
-
-
-# Run the Flask app
-if __name__ == "__main__":
+if __name__ == '__main__':
     app.run(debug=True)
