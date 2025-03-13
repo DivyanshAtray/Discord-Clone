@@ -158,16 +158,16 @@ textarea{
 .send {
     color: #dadada;
     position: absolute;
-    right: 55px;
+    right: 20px;
     top: 47%;
     transform: translateY(-50%);
     cursor: pointer;
 }
 
-.emoji{
+.attachment{
     color: #dadada;
     position: absolute;
-    right: 20px;
+    right: 55px;
     top: 50%;
     transform: translateY(-50%);
     cursor: pointer;
@@ -250,7 +250,7 @@ textarea{
     background-color: #3a3a3a;
     color: white;
     align-self: flex-end; /* User messages on the right */
-    text-align: right;
+    text-align: left;
     float: right;
     clear: both;
 }
