@@ -27,6 +27,21 @@
     background: #4752C4;
 }
 
+
+
+/* Hide number input arrows in Chrome, Safari, Edge, and Opera */
+#friendIdInput::-webkit-inner-spin-button, 
+#friendIdInput::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Hide number input arrows in Firefox */
+#friendIdInput {
+    -moz-appearance: textfield;
+}
+
+
 /* Optional: Scrollbar for Firefox */
 * {
     scrollbar-width: thin;
@@ -97,8 +112,30 @@ span:hover{
     overflow: auto;
 }
 
+.top{
+    display: flex;
+    justify-content: space-evenly;
+    width: 100%;
+}
+
+.icons{
+    display: flex;
+    /* flex-direction: row; */
+    width: 25%;
+    justify-content: flex-start;
+}
+
+.icon_top{
+    width: 25px;
+    height: auto;
+    cursor: pointer;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
 .name{
-    margin-left:  20px;
+    width: 50%;
+    justify-content: flex-start;
 }
 
 .name:hover{
@@ -110,7 +147,8 @@ hr {
     border: none;
     height: 1px;
     background-color: rgba(204, 204, 204, 0.541);
-    width: 50%;
+    width:80%;
+   
 }
 
 .messages{
@@ -262,4 +300,56 @@ textarea{
     text-align: left;
     float: left;
     clear: both;
+}
+
+
+
+
+
+
+
+
+
+
+.popup-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.popup {
+    background: rgb(39, 39, 39);
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+}
+.popup input {
+    padding: 5px;
+    margin: 10px 0;
+    width: 80%;
+    background-color: #444;
+    color: white;
+}
+
+.friend_id{
+    width: 30px;
+    height: auto;
+ 
+}
+.background{
+    margin-top: 10px;
+    margin-left: 40%;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background-color: #4752C4;
+    border-radius: 100%;
 }
