@@ -122,7 +122,7 @@ span:hover{
     display: flex;
     /* flex-direction: row; */
     width: 25%;
-    justify-content: flex-start;
+    justify-content: flex-end;
 }
 
 .icon_top{
@@ -304,13 +304,6 @@ textarea{
 
 
 
-
-
-
-
-
-
-
 .popup-overlay {
     display: none;
     position: fixed;
@@ -323,12 +316,16 @@ textarea{
     justify-content: center;
     align-items: center;
 }
+
 .popup {
     background: rgb(39, 39, 39);
     padding: 20px;
     border-radius: 10px;
     text-align: center;
+    max-height: 30dvh;
+    overflow-y: auto;
 }
+
 .popup input {
     padding: 5px;
     margin: 10px 0;
@@ -352,4 +349,61 @@ textarea{
     height: 40px;
     background-color: #4752C4;
     border-radius: 100%;
+}
+
+.background:hover{
+    transition: ease-out 0.5s;
+}
+
+
+.popup {
+    position: relative;
+    padding: 20px;
+    border-radius: 10px;
+    width: 300px;
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.6);
+
+
+    background: rgb(39, 39, 39);
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    max-height: 30dvh;
+    overflow-y: auto;
+}
+
+.close-btn {
+    position: absolute;
+    top: 5px;
+    right: 15px;
+    font-size: 30px;
+    cursor: pointer;
+    color: #555;
+}
+
+.close-btn:hover {
+    color: white;
+    transition: ease-out 0.3s;
+    background: none;
+}
+
+.accept-btn{
+    margin-right: 20px;
+    cursor: pointer;
+    border-radius: 100%;
+    &:hover{
+    background: #555;
+    transition: ease-in-out 0.3s;
+    }
+}
+
+.deny-btn{
+    margin-left: 20px;
+    cursor: pointer;
+    
+    &:hover{
+        background: #555;
+        transition: ease-in-out 1s;
+        border-radius: 100%;
+        }
 }

@@ -1,6 +1,4 @@
-import urllib
-
-from flask import Flask, render_template, request, session, flash, redirect, url_for, jsonify
+from flask import Flask, jsonify ,render_template, request, session, flash, redirect, url_for, jsonify
 from flask_socketio import SocketIO, emit
 import os
 import random
@@ -8,10 +6,7 @@ import string,sqlite3
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key"
-socketio = SocketIO(app,cors_allowed_origins="*")
-
-# Dictionary to track connected users (optional)
-connected_users = {}
+socketio = SocketIO(app)
 
 # Ensure the 'db.db' exists
 dirname = os.path.dirname(__file__)
@@ -59,7 +54,6 @@ def generate_random_string(length=10):
 def handle_connect():
     # Handle a user connection
     print("A user connected")
-    print(connected_users)
 
 
 @socketio.on("disconnect")
@@ -70,6 +64,43 @@ def handle_disconnect():
 @app.route('/login')
 def login_page():
     return render_template('login_page.html')
+
+from flask import jsonify
+
+
+@app.route('/api/last-messages', methods=['GET'])
+def get_last_messages():
+    try:
+        # Retrieve the value of 'x' from the 'settings' table
+        cursor.execute("SELECT value FROM settings WHERE key = 'message_limit'")
+        result = cursor.fetchone()
+
+        if result is None:
+            return jsonify({"error": "Setting for 'message_limit' not found"}), 404
+
+        # Extract the number of messages to fetch
+        message_limit = int(result[0])
+
+        # Fetch the last 'message_limit' messages
+        cursor.execute("SELECT * FROM messages ORDER BY timestamp DESC LIMIT ?", (message_limit,))
+        messages = cursor.fetchall()
+
+        # Assuming the messages table has columns like ('id', 'user', 'message', 'timestamp')
+        formatted_messages = [
+            {
+                "id": row[0],
+                "username": row[1],
+                "message": row[2],
+                "time": row[3],
+                "file_location":row[4]
+            }
+            for row in messages
+        ]
+
+        return jsonify(formatted_messages)
+    except Exception as e:
+        # Handle unexpected errors
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/submit', methods=['POST'])
 def submit():
@@ -93,14 +124,20 @@ def submit():
         if pwd[0] == password:
             return redirect("/chatroom")
         else:
-            flash("User already exists. Please log in.", "danger")
+            flash("User already exists. Please log in.","error")
             return redirect(url_for('login_page'))
-
-    # If user doesn't exist, register them
-    cursor.execute("INSERT INTO users (username, password, image1, image2) VALUES (?, ?, ?, ?)",
-                   (username, password, sqlite3.Binary(image1_blob) if image1_blob else None, sqlite3.Binary(image2_blob) if image2_blob else None))
-    conn.commit()
-    conn.close()
+    else:
+        cursor.execute("SELECT username FROM users WHERE username = ?", (username,))
+        user = cursor.fetchone()
+        if user:
+            flash("User already exists. Please log in.","error")
+            return redirect(url_for('login_page'))
+        else:
+        # If user doesn't exist, register them
+            cursor.execute("INSERT INTO users (username, password, image1, image2) VALUES (?, ?, ?, ?)",
+                           (username, password, sqlite3.Binary(image1_blob) if image1_blob else None, sqlite3.Binary(image2_blob) if image2_blob else None))
+            conn.commit()
+            conn.close()
 
     session['username'] = username  # Save user in session
     flash("Login successful!", "success")
@@ -112,7 +149,7 @@ def submit():
 def chatroom():
     # Check if user is logged in
     if 'username' not in session:
-        flash("Please log in to access the chatroom.", "danger")
+        flash("Please log in to access the chatroom.","error")
         return redirect(url_for('login_page'))
 
     return render_template('chatroom.html', username=session['username'])
@@ -177,4 +214,4 @@ def send_message():
 
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True,allow_unsafe_werkzeug=True)
+    socketio.run(app,debug=True,allow_unsafe_werkzeug=True)
