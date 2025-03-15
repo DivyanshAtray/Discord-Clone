@@ -96,6 +96,7 @@ function sendMessage() {
 function formatMessage(text) {
     return text
         .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>") // Bold
+        .replace(/#(.+?)#/g, "<h1>$1</h1>") // Heading
         .replace(/\*(.+?)\*/g, "<i>$1</i>") // Italics
         .replace(/```([\s\S]+?)```/g, (match, code) => `
     <div class="code-block" style="position: relative; display: inline-block;">
