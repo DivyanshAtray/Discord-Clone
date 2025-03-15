@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord</title>
+    <link rel="stylesheet" href="/static/chatroom.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet">
+
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=send" />
+
+    <script defer src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script defer id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+
+<body>
+    <div class="main">
+        <div class="sidebar">
+            <p>DIRECT MESSAGES</p>
+            <div class="dms">
+                <span><img class="pfp" src="https://images.saymedia-content.com/.image/t_share/MTkyOTkyMzE2OTQ3MDQ3NjQ1/website-background-templates.png" alt="">Will</span>
+                <span><img class="pfp" src="https://cdn.discordapp.com/avatars/795495556494393375/3c479a883b31eb44fd5c75212ab5c9b1.webp?size=80" alt="">Be</span>
+                <span><img class="pfp"
+                    src="https://cdn.discordapp.com/avatars/782241155407675413/a8475efacaab1b9898f91fa8e5c2c22a.webp?size=80"
+                    alt="">Taken</span>
+            <span><img class="pfp"
+                    src="https://cdn.discordapp.com/avatars/617037497574359050/a_9867e32bb8659beeca69eba2fc785111.gif?size=80"
+                    alt="">From</span>
+            <span><img class="pfp"
+                    src="https://cdn.discordapp.com/avatars/761149419701534720/7fcaafb35c738233de8296a96a27a4ca.webp?size=80"
+                    alt="">Database</span>
+            </div>
+        </div>
+
+        <div class="chat">
+            <span class="name"><img class="pfp" src="https://cdn.discordapp.com/avatars/795495556494393375/3c479a883b31eb44fd5c75212ab5c9b1.webp?size=80" alt="">Friend's Name</span> <hr>
+
+            <div class="messages"></div>
+
+            <div class="inputbar">
+                <textarea type="text" id="messageInput" placeholder="Message..."></textarea>
+                <input type="file" id="fileInput" style="display: none;">
+                <img class="send" src="/static/send.svg" alt="send">
+                <img class="attachment" src="/static/attachment.svg" alt="attachment">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const inputField = document.getElementById("messageInput");
+        const sendButton = document.querySelector(".send");
+        const messagesContainer = document.querySelector(".messages");
+        const fileInput = document.getElementById("fileInput");
+        const attachmentButton = document.querySelector(".attachment");
+        let selectedFile = null;
+
+        function sendMessage() {
+            const messageText = inputField.value.trim();
+            if (messageText === "" && !selectedFile) return;
+
+            const userMessageDiv = document.createElement("div");
+            userMessageDiv.classList.add("message", "user-message");
+
+            if (selectedFile) {
+                const fileURL = URL.createObjectURL(selectedFile);
+                userMessageDiv.innerHTML = `<a href="${fileURL}" target="_blank">${selectedFile.name}</a> <button onclick="downloadFile('${fileURL}', '${selectedFile.name}')">Download</button>`;
+                selectedFile = null;
+            } else {
+                userMessageDiv.innerHTML = formatMessage(messageText);
+            }
+            messagesContainer.appendChild(userMessageDiv);
+
+            fetch("/send_message", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: messageText })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const botMessageDiv = document.createElement("div");
+                botMessageDiv.classList.add("message", "bot-message");
+                botMessageDiv.innerHTML = formatMessage(data.response);
+                messagesContainer.appendChild(botMessageDiv);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                renderLatex();
+            })
+            .catch(error => console.error("Error:", error));
+
+            inputField.value = "";
+            autoResizeTextarea(inputField);
+        }
+
+        // Function to format messages (Bold, Italics, Code Blocks)
+function formatMessage(text) {
+    return text
+        .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>") // Bold
+        .replace(/\*(.+?)\*/g, "<i>$1</i>") // Italics
+        .replace(/```([\s\S]+?)```/g, (match, code) => `
+            <div class="code-block" style="position: relative; display: inline-block;">
+                <pre><code>${escapeHtml(code)}</code></pre>
+                <button class="copy-btn" onclick="copyToClipboard(this)" 
+                    style="position: absolute; right: 5px; top: 5px; cursor: pointer;">📋</button>
+            </div>
+        `);
+}
+
+// Function to copy code to clipboard
+function copyToClipboard(button) {
+    const codeBlock = button.previousElementSibling; // Get the <pre><code> block
+    const code = codeBlock.textContent.trim();
+    
+    navigator.clipboard.writeText(code)
+        .then(() => {
+            button.textContent = "✔ Copied!";
+            setTimeout(() => (button.textContent = "📋"), 2000);
+        })
+        .catch(err => console.error("Failed to copy:", err));
+}
+
+// Escape HTML to prevent injection
+function escapeHtml(text) {
+    return text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+
+        function renderLatex() {
+            if (window.MathJax) MathJax.typesetPromise();
+        }
+
+        function autoResizeTextarea(el) {
+            el.style.height = "auto";
+            el.style.height = el.scrollHeight + "px";
+        }
+
+        inputField.addEventListener("input", function () {
+            autoResizeTextarea(this);
+        });
+
+        inputField.addEventListener("keydown", function (event) {
+            if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        });
+
+        sendButton.addEventListener("click", sendMessage);
+
+        attachmentButton.addEventListener("click", () => fileInput.click());
+
+        fileInput.addEventListener("change", function () {
+            if (this.files.length > 0) {
+                selectedFile = this.files[0];
+                inputField.value = `📎 ${selectedFile.name}`;
+                autoResizeTextarea(inputField);
+            }
+        });
+
+        function downloadFile(url, filename) {
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    </script>
+</body>
+
+</html>

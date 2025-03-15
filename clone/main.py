@@ -1,4 +1,4 @@
-from flask import Flask, jsonify ,render_template, request, session, flash, redirect, url_for, jsonify
+from flask import Flask,render_template, request, session, flash, redirect, url_for, jsonify
 from flask_socketio import SocketIO, emit
 import os
 import random
@@ -8,34 +8,9 @@ app = Flask(__name__)
 app.secret_key = "your_secret_key"
 socketio = SocketIO(app)
 
-# Ensure the 'db.db' exists
-dirname = os.path.dirname(__file__)
-db_path = os.path.join(dirname, "db.db")
-if not os.path.exists(db_path):
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT NOT NULL UNIQUE,
-            password TEXT NOT NULL,
-            image1 BLOB,
-            image2 BLOB
-        )
-    ''')
-    cursor.execute('''
-        CREATE TABLE messages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT NOT NULL,
-            message TEXT,
-            time timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            file_location TEXT
-        )
-    ''')
-    conn.commit()
-    conn.close()
 
 # File upload configurations
+dirname = os.path.dirname(__file__)
 UPLOAD_FOLDER = os.path.join(dirname, "uploads")
 
 if not os.path.exists(UPLOAD_FOLDER):
@@ -65,12 +40,30 @@ def handle_disconnect():
 def login_page():
     return render_template('login_page.html')
 
-from flask import jsonify
+@app.route('/profile',methods=['POST','GET'])
+def profile():
+    id = request.args.get('id', type=int)
+    print(id)
+    conn = sqlite3.connect("db.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE id = ?", (id,))
+    row=cursor.fetchone()
+    if row:
+        formatted_messages = [
+            {
+                "username": row[1],
+                "image1": row[3],
+                "image2": row[4]
+            }]
+        return formatted_messages
+    else:
+        return None
 
-
-@app.route('/api/last-messages', methods=['GET'])
+@app.route('/messages', methods=['GET'])
 def get_last_messages():
     try:
+        conn = sqlite3.connect("db.db")
+        cursor = conn.cursor()
         # Retrieve the value of 'x' from the 'settings' table
         cursor.execute("SELECT value FROM settings WHERE key = 'message_limit'")
         result = cursor.fetchone()
@@ -166,7 +159,6 @@ def get_username():
 
 @socketio.on("send_message")
 def handle_send_message(data):
-    print(data)
     """
     Handle incoming messages from users.
     Data format (example):
@@ -191,6 +183,7 @@ def send_message():
         return redirect(url_for('login_page'))
 
     username = session['username']
+    print(request.form)
     message = request.form['message']
     file = request.files.get('file')  # File received via the "send_message" endpoint
 

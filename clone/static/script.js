@@ -249,18 +249,48 @@ function sendMessage() {
 
     messagesContainer.appendChild(userMessageDiv);
     scrollToBottom(); // Auto-scroll after sending a message
-
+    dataToSend= new FormData()
+    dataToSend.append("message",messageText)
     fetch("/send_message", {
         method: "POST",
-        body: new FormData()
+        body: dataToSend
     }).then(() => {
         const USER = getUsernameFromCookies();
         socket.emit("send_message", { message: messageText, username: USER });
     });
 
     inputField.value = ""; // Clear input field
+    scrollToBottom();
 }
 
+document.addEventListener("DOMContentLoaded", () => {
+    const sendButton = document.getElementById("sendButton");
+    const friendIdInput = document.getElementById("friendIdInput");
+
+    sendButton.addEventListener("click", async () => {
+        const friendId = friendIdInput.value;
+
+        if (!friendId) {
+            alert("Please enter a valid Friend ID");
+            return;
+        }
+
+        try {
+            // Make an API call to fetch user information
+            const response = await fetch(`/profile?id=${friendId}`);
+
+            const data = await response.json();
+            if (data[0]["username"]) {
+                alert(`Friend request sent to ${data[0]["username"]}`);
+            } else {
+                alert("User does not exist with that ID");
+            }
+
+        } catch (error) {
+            alert(`User does not exist with ID ${friendId}`);
+        }
+    });
+});
 
 socket.on("broadcast_message", (data) => {
     const USER = getUsernameFromCookies();
@@ -310,8 +340,4 @@ if (event.target === friendRequestsOverlay) {
 
 closeRequestsPopup.addEventListener('click', closeFriendRequestsPopup);
 });
-
-
-
-
 
