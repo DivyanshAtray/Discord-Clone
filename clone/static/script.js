@@ -1,41 +1,81 @@
-window.onload = () => {
-    if (!getUsernameFromCookies()) {
-        // Fetch username only if it's not already in cookies
-        fetchAndSaveUsername();
-    }
-};
-function getUsernameFromCookies() {
-    const cookies = document.cookie.split(';'); // Split cookies by ";"
-    for (let i = 0; i < cookies.length; i++) {
-        const cookie = cookies[i].trim(); // Remove leading/trailing spaces
-        if (cookie.startsWith('username=')) {
-            return cookie.split('=')[1]; // Return the value of the username
-        }
-    }
-    return null; // Return null if username is not found
-}
-
+// Function to fetch the username and user ID and save them as cookies
 async function fetchAndSaveUsername() {
     try {
-        const response = await fetch('/get_username'); // Replace with your endpoint
+        // Fetch the username and ID from the endpoint
+        const response = await fetch('/get_username', {
+            method: 'GET',
+            credentials: 'include', // Include cookies with the request
+        });
+
+        // Check if the response is okay
         if (!response.ok) {
-            throw new Error('Failed to fetch username');
+            throw new Error('Failed to fetch username and ID');
         }
+
         const data = await response.json();
-        if (data.username) {
-            // Save username to cookies
-            document.cookie = `username=${data.username}; path=/`; // Add ";path=/" to make it accessible site-wide
-            console.log("Fetched and saved username in cookies:", data.username);
-            return data.username; // Return the username if needed
+
+        // Check if username and ID exist in the data
+        if (data.username && data.id) {
+            console.log('Fetched data:', data);
+
+            // Save both username and user ID to cookies
+            const expirationDays = 7; // Example: Keep the cookies for 7 days
+            const date = new Date();
+            date.setTime(date.getTime() + (expirationDays * 24 * 60 * 60 * 1000));
+            const expires = `expires=${date.toUTCString()}`;
+
+            // Save cookies with path and expiration
+            document.cookie = `username=${data.username}; path=/; ${expires}`;
+            document.cookie = `id=${data.id}; path=/; ${expires}`;
+
+            console.log('Username and ID saved to cookies.');
         } else {
-            console.error("Error:", data.error);
-            return null;
+            console.error('Invalid data format:', data);
         }
     } catch (error) {
-        console.error("Error while fetching username:", error);
-        return null;
+        console.error('Error fetching and saving username and ID:', error);
     }
 }
+
+// Function to get a cookie by name
+function getCookie(name) {
+    const key = name + "=";
+    const decodedCookie = decodeURIComponent(document.cookie);
+    const cookieArray = decodedCookie.split(';');
+    for (let i = 0; i < cookieArray.length; i++) {
+        let cookie = cookieArray[i].trim();
+        if (cookie.indexOf(key) === 0) {
+            return cookie.substring(key.length, cookie.length);
+        }
+    }
+    return null;
+}
+
+// Function to retrieve username and ID from cookies
+function getUserCookies() {
+    const username = getCookie('username');
+    const userId = getCookie('id');
+
+    if (username && userId) {
+        return {
+            username: username,
+            userId: userId,
+        };
+    }
+    return null; // Return null if either cookie is missing
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const userCookies = getUserCookies();
+
+    if (!userCookies || !userCookies.username || !userCookies.userId) {
+        console.log('Cookies not found, fetching from server...');
+        fetchAndSaveUsername();
+    } else {
+        console.log('User data loaded from cookies:', userCookies);
+    }
+});
+
 const inputField = document.getElementById("messageInput");
 const sendButton = document.querySelector(".send");
 const messagesContainer = document.querySelector(".messages");
@@ -82,7 +122,7 @@ function sendMessage() {
         .then(data => {
             if (data.status === 'success') {
                 // Emit the socket event after the message is successfully sent
-                const USER = getUsernameFromCookies();
+                const USER = getCookie("username");
                 socket.emit("send_message", { message: messageText, username: USER });
             }
         });
@@ -91,6 +131,14 @@ function sendMessage() {
     inputField.value = "";
 }
 
+// Redirect to the logout route
+document.getElementById('lgout').addEventListener('click', function() {
+        document.cookie.split(";").forEach(function(cookie) {
+            const [name] = cookie.split("=");
+            document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/";
+    });
+        window.location.href = "/logout";
+});
 
 // Function to format messages (Bold, Italics, Code Blocks)
 function formatMessage(text) {
@@ -170,7 +218,7 @@ function downloadFile(url, filename) {
 
 socket.on("broadcast_message", (data) => {
     // Automatically called when the server emits "broadcast_message"
-    const USER = getUsernameFromCookies();
+    const USER = getCookie("username");
 
     const username = data.username || "Anonymous";
     const message = data.message || "";
@@ -255,12 +303,39 @@ function sendMessage() {
         method: "POST",
         body: dataToSend
     }).then(() => {
-        const USER = getUsernameFromCookies();
+        const USER = getCookie("username");
         socket.emit("send_message", { message: messageText, username: USER });
     });
 
     inputField.value = ""; // Clear input field
     scrollToBottom();
+}
+
+async function addFriend(friendId) {
+    try {
+        // Ensure friendId is valid
+        if (!friendId) {
+            throw new Error('Friend ID is required');
+        }
+
+        // Build the URL with the friendId as a query parameter
+        const url = `/add-friend?friendId=${encodeURIComponent(friendId)}`;
+
+        // Send a GET request to the /add-friend endpoint with friendId in the URL
+        const response = await fetch(url, {
+            method: 'GET', // Use GET since we're sending the parameter in the URL
+        });
+
+        // Check if the response is okay
+        if (response.ok) {
+            const result = await response.json();
+            console.log('Friend successfully added:', result);
+        } else {
+            throw new Error(`Failed to add friend. Status: ${response.status}`);
+        }
+    } catch (error) {
+        console.error('Error adding friend:', error.message);
+    }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -277,11 +352,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
         try {
             // Make an API call to fetch user information
+            console.log(friendId)
             const response = await fetch(`/profile?id=${friendId}`);
-
+            console.log(response)
             const data = await response.json();
             if (data[0]["username"]) {
-                alert(`Friend request sent to ${data[0]["username"]}`);
+                addFriend(friendId)
             } else {
                 alert("User does not exist with that ID");
             }
@@ -292,8 +368,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
+
 socket.on("broadcast_message", (data) => {
-    const USER = getUsernameFromCookies();
+    const USER = getCookie("username");
     const username = data.username || "Anonymous";
     const message = data.message || "";
 
@@ -341,3 +418,61 @@ if (event.target === friendRequestsOverlay) {
 closeRequestsPopup.addEventListener('click', closeFriendRequestsPopup);
 });
 
+
+
+document.addEventListener("DOMContentLoaded", function () {
+    const userId = getCookie("id"); // Replace this with dynamic logic to get the user ID if necessary
+    console.log(userId)
+
+    const friendsWrapper = document.getElementById("friendsWrapper");
+    const friendRequestsList = document.getElementById("friendRequestsList");
+
+    // Fetch friends and incoming requests
+    fetch(`/get-friend-data?id=${userId}`)
+        .then(response => response.json())
+        .then(data => {
+            // Handle friends
+            const friends = data.friends;
+            if (friends && friends.length > 0) {
+                friends.forEach(friend => {
+                    // Fetch individual friend's data
+                    fetch(`/profile?id=${friend}`)
+                        .then(response => response.json())
+                        .then(friendData => {
+                            if (friendData.username) {
+                                const friendElement = document.createElement("span");
+                                friendElement.className = "dms";
+                                friendElement.innerHTML = `
+                                        <img class="pfp" src="${friendData.profile_picture}"
+                                            alt="hehe">${friendData.username}
+                                `;
+                                friendsWrapper.appendChild(friendElement);
+                            }
+                        })
+                        .catch(error => console.error("Error fetching friend data:", error));
+                });
+            } else {
+                        console.log("no biches lol")
+
+            }
+
+            // Handle incoming requests
+            const incomingRequests = data.incoming_requests;
+            if (incomingRequests && incomingRequests.length > 0) {
+                incomingRequests.forEach(request => {
+                    const requestElement = document.createElement("div");
+                    requestElement.className = "friend-request";
+                    requestElement.innerHTML = `
+                        <span>${request}</span>
+                        <img class="accept-btn" src="/static/accept.svg" alt="Accept">
+                        <img class="deny-btn" src="/static/deny.svg" alt="Deny">
+                    `;
+                    friendRequestsList.appendChild(requestElement);
+                });
+            } else {
+                console.log("no incoming requests")
+                friendRequestsList.innerHTML = "<div>No incoming requests</div>";
+            }
+        })
+        .catch(error => console.error("Error fetching friends and requests:", error));
+});

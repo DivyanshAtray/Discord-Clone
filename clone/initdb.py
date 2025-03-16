@@ -6,6 +6,7 @@ db_path = os.path.join(dirname, "db.db")
 if not os.path.exists(db_path):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
+    conn.execute("PRAGMA journal_mode=WAL;")
     cursor.execute('''
         CREATE TABLE users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -19,6 +20,7 @@ if not os.path.exists(db_path):
         CREATE TABLE messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT NOT NULL,
+            "to" TEXT,
             message TEXT,
             time timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
             file_location TEXT
@@ -26,9 +28,9 @@ if not os.path.exists(db_path):
     ''')
     cursor.execute('''
             CREATE TABLE friends (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT NOT NULL,
-                friends TEXT
+                user_id INT NOT NULL,
+                friends TEXT,
+                incoming_request TEXT
             )
         ''')
     conn.commit()

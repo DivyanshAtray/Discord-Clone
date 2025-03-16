@@ -4,6 +4,8 @@ import os
 import random
 import string,sqlite3
 
+from clone.initdb import db_path
+
 app = Flask(__name__)
 app.secret_key = "your_secret_key"
 socketio = SocketIO(app)
@@ -36,18 +38,122 @@ def handle_disconnect():
     # Remove a user from the connected users (if needed)
     print("A user disconnected")
 
+@app.route('/get-friend-data', methods=['GET'])
+def get_user_data():
+    user_id = request.args.get('id')  # Get 'id' from query parameters
+    if not user_id:
+        return jsonify({"error": "No 'id' parameter provided"}), 400
+
+    try:
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        # Query the friends table for the specific user ID
+        cursor.execute('SELECT friends, incoming_request FROM friends WHERE user_id = ?', (user_id,))
+        row = cursor.fetchone()
+
+        if row:
+            response = {
+                "friends": row["friends"],
+                "incoming_request": row["incoming_request"]
+            }
+        else:
+            response = {"error": f"No user found with id {user_id}"}
+        print(response)
+        conn.close()
+        return jsonify(response), 200
+
+    except Exception as e:
+        print(e)
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/request-friend')
+def request_friend():
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute('SELECT id FROM users WHERE username = ?', (session['username'],))
+    user_id = cursor.fetchone()[0]
+    friend_id = request.args.get('friendId', type=int)
+    if not user_id or not friend_id:
+        return jsonify({"error": "Missing 'id' or 'friend_id' parameter"}), 400
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute('SELECT incoming_request FROM friends WHERE user_id = ?', (user_id,))
+        requests = cursor.fetchone()
+        print(requests)
+        cursor.execute('SELECT friends FROM friends WHERE user_id = ?', (friend_id,))
+        friend_list = cursor.fetchone()
+        if requests:
+            request_list = requests[0].split(',')
+            if friend_id in friend_list:
+                return jsonify({"error": "Friend already exists"}), 400
+            if friend_id not in request_list:
+                request_list.append(friend_id)
+                friends_str = ','.join(request_list)
+                cursor.execute('UPDATE incoming_request SET friends = ? WHERE user_id = ?', (friends_str, user_id))
+                conn.commit()
+                conn.close()
+                return jsonify({"status": "Request added successfully"}), 200
+            else:
+                return jsonify({"error": "Request already exists"}), 400
+        else:
+            cursor.execute('INSERT INTO friends (user_id, friends) VALUES (?, ?)', (user_id, friend_id))
+            conn.commit()
+            conn.close()
+    except Exception as e:
+        print(e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/add-friend')
+def add_friend():
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute('SELECT id FROM users WHERE username = ?', (session['username'],))
+    user_id = cursor.fetchone()[0]
+    friend_id = request.args.get('friendId', type=int)
+    if not user_id or not friend_id:
+        return jsonify({"error": "Missing 'id' or 'friend_id' parameter"}), 400
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute('SELECT friends FROM friends WHERE user_id = ?', (user_id,))
+        friends = list(cursor.fetchone())
+        print(friends)
+        if friends:
+            friends_list = list(friends.split(','))
+            if friend_id not in friends_list:
+                friends_list.append(friend_id)
+                friends_str = ','.join(friends_list)
+                cursor.execute('UPDATE friends SET friends = ? WHERE user_id = ?', (friends_str, user_id))
+                conn.commit()
+                conn.close()
+                return jsonify({"status": "Friend added successfully"}), 200
+            else:
+                return jsonify({"error": "Friend already exists"}), 400
+        else:
+            cursor.execute('INSERT INTO friends (user_id, friends) VALUES (?, ?)', (user_id, friend_id))
+            conn.commit()
+            conn.close()
+    except Exception as e:
+        print(e)
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/login')
 def login_page():
     return render_template('login_page.html')
 
-@app.route('/profile',methods=['POST','GET'])
+@app.route('/profile',methods=['GET'])
 def profile():
     id = request.args.get('id', type=int)
     print(id)
-    conn = sqlite3.connect("db.db")
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM users WHERE id = ?", (id,))
     row=cursor.fetchone()
+    print(row)
     if row:
         formatted_messages = [
             {
@@ -57,7 +163,15 @@ def profile():
             }]
         return formatted_messages
     else:
-        return None
+        return jsonify({"error": "ID doesn't exist or not found"}), 404
+
+
+@app.route('/logout')
+def logout():
+    # Clear the user session
+    session.pop('username', None)
+    # Redirect to the login page
+    return redirect(url_for('login_page'))
 
 @app.route('/messages', methods=['GET'])
 def get_last_messages():
@@ -115,7 +229,8 @@ def submit():
         cursor.execute("SELECT password FROM users WHERE username = ?", (username,))
         pwd = cursor.fetchone()
         if pwd[0] == password:
-            return redirect("/chatroom")
+            session['username'] = username
+            return redirect("/")
         else:
             flash("User already exists. Please log in.","error")
             return redirect(url_for('login_page'))
@@ -152,7 +267,12 @@ def chatroom():
 def get_username():
     username = session.get('username')  # Retrieve the username from the session
     if username:
-        return jsonify({"username": username})
+        conn=sqlite3.connect(db_path)
+        cursor=conn.cursor()
+        cursor.execute("SELECT id FROM users WHERE username = ?",(username,))
+        id=cursor.fetchone()
+        data=jsonify({"username": username,"id":id[0]})
+        return data
     else:
         return jsonify({"error": "No username found"}), 401
 
@@ -167,8 +287,10 @@ def handle_send_message(data):
         "message": "Hello, everyone!"
     }
     """
-
+    print(data)
     username = data["username"]
+    if username is None:
+        return
     message = data["message"]
     print(f"{username}: {message}")
 
@@ -183,7 +305,6 @@ def send_message():
         return redirect(url_for('login_page'))
 
     username = session['username']
-    print(request.form)
     message = request.form['message']
     file = request.files.get('file')  # File received via the "send_message" endpoint
 
