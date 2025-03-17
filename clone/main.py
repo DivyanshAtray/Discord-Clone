@@ -4,8 +4,6 @@ import os,base64
 import random
 import string,sqlite3
 
-from clone.initdb import db_path
-
 app = Flask(__name__)
 app.secret_key = "your_secret_key"
 socketio = SocketIO(app)
@@ -13,6 +11,7 @@ socketio = SocketIO(app)
 
 # File upload configurations
 dirname = os.path.dirname(__file__)
+db_path = os.path.join(dirname, "db.db")
 UPLOAD_FOLDER = os.path.join(dirname, "uploads")
 
 if not os.path.exists(UPLOAD_FOLDER):
