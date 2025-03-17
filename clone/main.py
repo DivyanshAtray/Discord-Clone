@@ -1,6 +1,6 @@
 from flask import Flask,render_template, request, session, flash, redirect, url_for, jsonify
 from flask_socketio import SocketIO, emit
-import os
+import os,base64
 import random
 import string,sqlite3
 
@@ -72,74 +72,155 @@ def get_user_data():
 def request_friend():
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
+
+    # Get the current user ID
     cursor.execute('SELECT id FROM users WHERE username = ?', (session['username'],))
     user_id = cursor.fetchone()[0]
+
+    # Get the friend ID
     friend_id = request.args.get('friendId', type=int)
+
+    # Check for missing parameters
     if not user_id or not friend_id:
+        conn.close()
         return jsonify({"error": "Missing 'id' or 'friend_id' parameter"}), 400
+
+    # Ensure that the user isn't sending a request to themselves
+    if user_id == friend_id:
+        conn.close()
+        return jsonify({"error": "You cannot send a friend request to yourself"}), 400
+
     try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
+        # Check if there is already an incoming request from the same ID
         cursor.execute('SELECT incoming_request FROM friends WHERE user_id = ?', (user_id,))
-        requests = cursor.fetchone()
-        print(requests)
-        cursor.execute('SELECT friends FROM friends WHERE user_id = ?', (friend_id,))
-        friend_list = cursor.fetchone()
-        if requests:
-            request_list = requests[0].split(',')
-            if friend_id in friend_list:
-                return jsonify({"error": "Friend already exists"}), 400
-            if friend_id not in request_list:
-                request_list.append(friend_id)
-                friends_str = ','.join(request_list)
-                cursor.execute('UPDATE incoming_request SET friends = ? WHERE user_id = ?', (friends_str, user_id))
-                conn.commit()
+        incoming_requests = cursor.fetchone()
+
+        if incoming_requests and incoming_requests[0]:  # If there are existing incoming requests
+            # Parse the delimited string into a list
+            incoming_request_list = incoming_requests[0].split(',')
+
+            # Check if the friendId is already in the incoming request list
+            if str(friend_id) in incoming_request_list:
                 conn.close()
-                return jsonify({"status": "Request added successfully"}), 200
-            else:
-                return jsonify({"error": "Request already exists"}), 400
+                return jsonify(
+                    {"error": "A friend request from this user already exists. Please wait for them to respond."}), 400
+
+        # Check if the friend is already in the user's friends list
+        cursor.execute('SELECT friends FROM friends WHERE user_id = ?', (user_id,))
+        friends_data = cursor.fetchone()
+        if friends_data and friends_data[0]:  # If there are existing friends
+            # Parse the delimited string into a list
+            friends_list = friends_data[0].split(',')
+
+            if str(friend_id) in friends_list:
+                conn.close()
+                return jsonify({"error": "This user is already in your friends list."}), 400
+
+        # Add the friendId to the incoming_request list
+        if incoming_requests and incoming_requests[0]:
+            # Append to the existing incoming_request string
+            incoming_request_list.append(str(friend_id))
+            updated_requests = ','.join(incoming_request_list)
+            print(updated_requests)
+            cursor.execute('UPDATE friends SET incoming_request = ? WHERE user_id = ?', (updated_requests, user_id))
         else:
-            cursor.execute('INSERT INTO friends (user_id, friends) VALUES (?, ?)', (user_id, friend_id))
-            conn.commit()
-            conn.close()
+            print("new entry must be added ig")
+            # Create a new incoming_request entry
+            cursor.execute('INSERT INTO friends(user_id,incoming_request) VALUES(?,?)', (user_id,str(friend_id) ))
+
+        conn.commit()
+        conn.close()
+        return jsonify({"status": "Friend request sent successfully."}), 200
+
     except Exception as e:
+        conn.close()
         print(e)
         return jsonify({"error": str(e)}), 500
 
 
-@app.route('/add-friend')
+@app.route('/add_friend')
 def add_friend():
+    print("im called")
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
+
+    # Get the current user's ID
     cursor.execute('SELECT id FROM users WHERE username = ?', (session['username'],))
     user_id = cursor.fetchone()[0]
-    friend_id = request.args.get('friendId', type=int)
+    print(user_id)
+
+    # Get the friend ID (the ID of the user sending the friend request)
+    friend_id = request.args.get('id', type=int)
+    print(friend_id)
+    # Check for missing parameters
     if not user_id or not friend_id:
+        conn.close()
         return jsonify({"error": "Missing 'id' or 'friend_id' parameter"}), 400
+
     try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        cursor.execute('SELECT friends FROM friends WHERE user_id = ?', (user_id,))
-        friends = list(cursor.fetchone())
-        print(friends)
-        if friends:
-            friends_list = list(friends.split(','))
-            if friend_id not in friends_list:
-                friends_list.append(friend_id)
-                friends_str = ','.join(friends_list)
-                cursor.execute('UPDATE friends SET friends = ? WHERE user_id = ?', (friends_str, user_id))
-                conn.commit()
-                conn.close()
-                return jsonify({"status": "Friend added successfully"}), 200
-            else:
-                return jsonify({"error": "Friend already exists"}), 400
-        else:
-            cursor.execute('INSERT INTO friends (user_id, friends) VALUES (?, ?)', (user_id, friend_id))
-            conn.commit()
+        # Check if there is an incoming friend request from the friendId
+        cursor.execute('SELECT incoming_request FROM friends WHERE user_id = ?', (user_id,))
+        incoming_requests = cursor.fetchone()
+
+        if not incoming_requests or not incoming_requests[0]:  # If there are no incoming requests
             conn.close()
+            return jsonify({"error": "No friend request from this user exists."}), 400
+
+        # Parse the incoming request list
+        incoming_request_list = incoming_requests[0].split(',')
+        if str(friend_id) not in incoming_request_list:
+            conn.close()
+            return jsonify({"error": "No friend request from this user exists."}), 400
+
+        # Remove the friendId from the incoming request list
+        incoming_request_list.remove(str(friend_id))
+        updated_requests = ','.join(incoming_request_list)
+
+        # Update the incoming_request list in the database
+        cursor.execute('UPDATE friends SET incoming_request = ? WHERE user_id = ?', (updated_requests, user_id))
+
+        # Add the friendId to the current user's friends list
+        cursor.execute('SELECT friends FROM friends WHERE user_id = ?', (user_id,))
+        user_friends = cursor.fetchone()
+        if user_friends and user_friends[0]:  # If there are existing friends
+            user_friends_list = user_friends[0].split(',')
+            if str(friend_id) not in user_friends_list:
+                user_friends_list.append(str(friend_id))
+                updated_user_friends = ','.join(user_friends_list)
+            else:
+                updated_user_friends = user_friends[0]  # No change
+        else:
+            updated_user_friends = str(friend_id)  # Create the new friend list if none exists
+
+        # Update the current user's friends list
+        cursor.execute('UPDATE friends SET friends = ? WHERE user_id = ?', (updated_user_friends, user_id))
+
+        # Add the current user's ID to the friend's friends list
+        cursor.execute('SELECT friends FROM friends WHERE user_id = ?', (friend_id,))
+        friend_friends = cursor.fetchone()
+        if friend_friends and friend_friends[0]:  # If the friend already has a friends list
+            friend_friends_list = friend_friends[0].split(',')
+            if str(user_id) not in friend_friends_list:
+                friend_friends_list.append(str(user_id))
+                updated_friend_friends = ','.join(friend_friends_list)
+            else:
+                updated_friend_friends = friend_friends[0]  # No change
+        else:
+            updated_friend_friends = str(user_id)  # Create the new friends list if none exists
+
+        # Update the friend's friends list
+        cursor.execute('UPDATE friends SET friends = ? WHERE user_id = ?', (updated_friend_friends, friend_id))
+
+        # Commit the changes to the database
+        conn.commit()
+        conn.close()
+        return jsonify({"status": "Friend added successfully!"}), 200
+
     except Exception as e:
+        conn.close()
         print(e)
         return jsonify({"error": str(e)}), 500
+
 
 @app.route('/login')
 def login_page():
@@ -148,20 +229,20 @@ def login_page():
 @app.route('/profile',methods=['GET'])
 def profile():
     id = request.args.get('id', type=int)
-    print(id)
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM users WHERE id = ?", (id,))
     row=cursor.fetchone()
-    print(row)
     if row:
+        encoded_image1 = base64.b64encode(row[3]).decode('utf-8')
+        encoded_image2 = base64.b64encode(row[4]).decode('utf-8')
         formatted_messages = [
             {
                 "username": row[1],
-                "image1": row[3],
-                "image2": row[4]
+                "image1": encoded_image1,
+                "image2": encoded_image2
             }]
-        return formatted_messages
+        return jsonify(formatted_messages)
     else:
         return jsonify({"error": "ID doesn't exist or not found"}), 404
 
@@ -213,7 +294,6 @@ def get_last_messages():
 def submit():
     username = request.form['username']
     password = request.form['password']
-
     # Store files as BLOBs in database for image1 and image2
     image1_blob = request.files['image1'].read() if 'image1' in request.files else None
     image2_blob = request.files['image2'].read() if 'image2' in request.files else None

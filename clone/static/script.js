@@ -107,7 +107,6 @@ function sendMessage() {
     }
 
     if (messageText !== "") {
-        console.log(messageText)
         formData.append("message", messageText); // Add message to FormData
         userMessageDiv.innerHTML += formatMessage(messageText); // Append message to chat
     }
@@ -311,32 +310,40 @@ function sendMessage() {
     scrollToBottom();
 }
 
-async function addFriend(friendId) {
+async function sendFriendRequest(friendId) {
     try {
-        // Ensure friendId is valid
+        // Ensure the friendId is provided
         if (!friendId) {
-            throw new Error('Friend ID is required');
+            alert("Friend ID is missing.");
+            return;
         }
 
-        // Build the URL with the friendId as a query parameter
-        const url = `/add-friend?friendId=${encodeURIComponent(friendId)}`;
-
-        // Send a GET request to the /add-friend endpoint with friendId in the URL
-        const response = await fetch(url, {
-            method: 'GET', // Use GET since we're sending the parameter in the URL
+        // Make the request to the server
+        const response = await fetch(`/request-friend?friendId=${friendId}`, {
+            method: 'GET', // Use GET or POST depending on your server implementation
+            credentials: 'include', // Include cookies with the request
         });
 
-        // Check if the response is okay
+        // Parse the server's response
+        const data = await response.json();
+
+        // Display appropriate message based on server response
         if (response.ok) {
-            const result = await response.json();
-            console.log('Friend successfully added:', result);
+            // Success: Display success message
+            alert(data.status || "Friend request sent successfully!");
         } else {
-            throw new Error(`Failed to add friend. Status: ${response.status}`);
+            // Error: Display error message
+            alert(data.error || "An error occurred while sending the friend request.");
         }
     } catch (error) {
-        console.error('Error adding friend:', error.message);
+        // Handle network or unexpected errors
+        console.error("Error sending friend request:", error);
+        alert("An unexpected error occurred. Please try again.");
     }
 }
+
+
+
 
 document.addEventListener("DOMContentLoaded", () => {
     const sendButton = document.getElementById("sendButton");
@@ -351,13 +358,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         try {
-            // Make an API call to fetch user information
-            console.log(friendId)
             const response = await fetch(`/profile?id=${friendId}`);
-            console.log(response)
             const data = await response.json();
             if (data[0]["username"]) {
-                addFriend(friendId)
+                sendFriendRequest(friendId);
             } else {
                 alert("User does not exist with that ID");
             }
@@ -418,12 +422,86 @@ if (event.target === friendRequestsOverlay) {
 closeRequestsPopup.addEventListener('click', closeFriendRequestsPopup);
 });
 
+function ensureArray(value) {
+    if (!value) return [];
+    return Array.isArray(value) ? value : [value];
+}
 
+//
+//document.addEventListener("DOMContentLoaded", function () {
+//    const userId = getCookie("id"); // Replace this with dynamic logic to get the user ID if necessary
+//    console.log(userId);
+//    const friendsWrapper = document.getElementById("friendsWrapper");
+//    const friendRequestsList = document.getElementById("friendRequestsList");
+//
+//    // Fetch friends and incoming requests
+//    fetch(`/get-friend-data?id=${userId}`)
+//        .then(response => response.json())
+//        .then(data => {
+//            // Handle friends
+//            const friends = data.friends;
+//            console.log(friends);
+//            if (friends && friends.length > 0) {
+//                friends.forEach(friend => {
+//                    // Fetch individual friend's data
+//                    fetch(`/profile?id=${friend}`)
+//                        .then(response => response.json())
+//                        .then(friendData => {
+//                            if (friendData.username) {
+//                                const friendElement = document.createElement("span");
+//                                friendElement.className = "dms";
+//                                friendElement.innerHTML = `
+//                                    <img class="pfp" src="${friendData.profile_picture}" alt="hehe">
+//                                    ${friendData.username}
+//                                `;
+//                                friendsWrapper.appendChild(friendElement);
+//                            }
+//                        })
+//                        .catch(error => console.error("Error fetching friend data:", error));
+//                });
+//            } else {
+//                console.log("no biches lol");
+//            }
+//
+//            // Handle incoming requests
+//            let incomingRequests = data.incoming_request;
+//            incomingRequests = incomingRequests.split(",").map(Number)
+//            incomingRequests = ensureArray(incomingRequests);
+//            console.log(incomingRequests);
+//
+//
+//            if (incomingRequests && incomingRequests.length > 0) {
+//                incomingRequests.forEach(requestId => {
+//                console.log(requestId)
+//                    // Fetch the requester's username
+//                    fetch(`/profile?id=${requestId}`)
+//                        .then(response => response.json())
+//                        .then(requesterData => {
+//                        requesterData=requesterData[0]
+//                            if (requesterData.username) {
+//                                const requestElement = document.createElement("div");
+//                                requestElement.className = "friend-request";
+//                                requestElement.innerHTML = `
+//                                    <span>${requesterData.username}</span>
+//                                    <img class="accept-btn" src="/static/accept.svg" alt="Accept">
+//                                    <img class="deny-btn" src="/static/deny.svg" alt="Deny">
+//                                `;
+//                                friendRequestsList.appendChild(requestElement);
+//                            }
+//                        })
+//                        .catch(error => console.error("Error fetching requester data:", error));
+//                });
+//            } else {
+//                console.log("no incoming requests");
+//                friendRequestsList.innerHTML = "<div>No incoming requests</div>";
+//            }
+//        })
+//        .catch(error => console.error("Error fetching friends and requests:", error));
+//});
 
 document.addEventListener("DOMContentLoaded", function () {
     const userId = getCookie("id"); // Replace this with dynamic logic to get the user ID if necessary
-    console.log(userId)
-
+    console.log(userId);
     const friendsWrapper = document.getElementById("friendsWrapper");
     const friendRequestsList = document.getElementById("friendRequestsList");
 
@@ -432,47 +510,111 @@ document.addEventListener("DOMContentLoaded", function () {
         .then(response => response.json())
         .then(data => {
             // Handle friends
-            const friends = data.friends;
+            let friends = data.friends;
+            if (friends){
+            friends = friends.split(",").map(Number)
+            }
+            friends = ensureArray(friends);
+            console.log(friends);
             if (friends && friends.length > 0) {
                 friends.forEach(friend => {
-                    // Fetch individual friend's data
                     fetch(`/profile?id=${friend}`)
                         .then(response => response.json())
                         .then(friendData => {
+                        friendData=friendData[0]
                             if (friendData.username) {
                                 const friendElement = document.createElement("span");
-                                friendElement.className = "dms";
+                                const LogoutElement = document.getElementById("lgparent")
                                 friendElement.innerHTML = `
-                                        <img class="pfp" src="${friendData.profile_picture}"
-                                            alt="hehe">${friendData.username}
+                                    <img class="pfp" src="data:image/jpeg;base64,${friendData.image1}" alt="hehe">
+                                    ${friendData.username}
                                 `;
-                                friendsWrapper.appendChild(friendElement);
+                                friendsWrapper.insertBefore(friendElement,LogoutElement);
                             }
                         })
                         .catch(error => console.error("Error fetching friend data:", error));
                 });
             } else {
-                        console.log("no biches lol")
-
+                const friendElement = document.createElement("span");
+                friendElement.innerHTML = `
+                <img class="pfp" src="NONE" alt="hehe">
+                No friends`;
+                friendsWrapper.appendChild(friendElement);
             }
 
             // Handle incoming requests
-            const incomingRequests = data.incoming_requests;
+            let incomingRequests = data.incoming_request;
+            if (incomingRequests){
+            incomingRequests = incomingRequests.split(",").map(Number)
+            }
+            incomingRequests = ensureArray(incomingRequests);
+
             if (incomingRequests && incomingRequests.length > 0) {
-                incomingRequests.forEach(request => {
-                    const requestElement = document.createElement("div");
-                    requestElement.className = "friend-request";
-                    requestElement.innerHTML = `
-                        <span>${request}</span>
-                        <img class="accept-btn" src="/static/accept.svg" alt="Accept">
-                        <img class="deny-btn" src="/static/deny.svg" alt="Deny">
-                    `;
-                    friendRequestsList.appendChild(requestElement);
+                incomingRequests.forEach(requestId => {
+                    console.log("Fetching profile for request ID:", requestId);
+
+                    if (!requestId || isNaN(requestId)) {
+                        console.error("Invalid requestId:", requestId);
+                        return;
+                    }
+
+                    fetch(`/profile?id=${requestId}`)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`Failed to fetch profile for ID ${requestId}`);
+                            }
+                            return response.json();
+                        })
+                        .then(requesterData => {
+                        requesterData=requesterData[0]
+                            console.log("Fetched requester data:", requesterData);
+
+                            if (!requesterData.username) {
+                                throw new Error(`Username missing for ID ${requestId}`);
+                            }
+
+                            // Create friend request element
+                            const requestElement = document.createElement("div");
+                            requestElement.className = "friend-request";
+                            requestElement.id = `request_${requestId}`; // Unique ID for removal
+
+                            requestElement.innerHTML = `
+                                <span>${requesterData.username}</span>
+                                <img id="accept_${requestId}" class="accept-btn" src="/static/accept.svg" alt="Accept">
+                                <img id="deny_${requestId}" class="deny-btn" src="/static/deny.svg" alt="Deny">
+                            `;
+
+                            friendRequestsList.appendChild(requestElement);
+
+                            // Add event listeners for accept and deny buttons
+                            document.getElementById(`accept_${requestId}`).addEventListener("click", function () {
+                                handleFriendAction("/add_friend", requestId, requestElement);
+                            });
+
+                            document.getElementById(`deny_${requestId}`).addEventListener("click", function () {
+                                handleFriendAction("/remove_request", requestId, requestElement);
+                            });
+                        })
+                        .catch(error => console.error("Error fetching requester data:", error.message));
                 });
             } else {
-                console.log("no incoming requests")
+                console.log("no incoming requests");
                 friendRequestsList.innerHTML = "<div>No incoming requests</div>";
             }
         })
         .catch(error => console.error("Error fetching friends and requests:", error));
+
+    // Function to handle friend request actions (Accept/Deny) using GET request
+    function handleFriendAction(url, requestId, requestElement) {
+        fetch(`${url}?id=${requestId}`, { method: "GET" }) // Sending request ID as URL param
+            .then(response => response.json())
+            .then(data => {
+                alert(data.status); // Alert the user with the response status
+
+                if (data.status === "ok") {
+                    requestElement.remove(); // Remove the element from the list
+                }
+            })
+            .catch(error => console.error(`Error with ${url}:`, error));
+    }
 });
