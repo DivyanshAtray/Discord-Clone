@@ -529,7 +529,7 @@ document.addEventListener("DOMContentLoaded", function () {
                                     <img class="pfp" src="data:image/jpeg;base64,${friendData.image1}" alt="hehe">
                                     ${friendData.username}
                                 `;
-                                friendsWrapper.insertBefore(friendElement,LogoutElement);
+                                friendsWrapper.appendChild(friendElement,LogoutElement);
                             }
                         })
                         .catch(error => console.error("Error fetching friend data:", error));
