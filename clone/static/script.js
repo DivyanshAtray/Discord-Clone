@@ -524,12 +524,11 @@ document.addEventListener("DOMContentLoaded", function () {
                         friendData=friendData[0]
                             if (friendData.username) {
                                 const friendElement = document.createElement("span");
-                                const LogoutElement = document.getElementById("lgparent")
                                 friendElement.innerHTML = `
                                     <img class="pfp" src="data:image/jpeg;base64,${friendData.image1}" alt="hehe">
                                     ${friendData.username}
                                 `;
-                                friendsWrapper.appendChild(friendElement,LogoutElement);
+                                friendsWrapper.appendChild(friendElement);
                             }
                         })
                         .catch(error => console.error("Error fetching friend data:", error));
