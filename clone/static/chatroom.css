@@ -79,7 +79,7 @@ p{
     
     display: flex;
     flex-direction: column;
-    height: 85dvh;
+    height: 95dvh;
     overflow-y: auto;
     /* justify-content: space-around; */
 }
