@@ -465,6 +465,13 @@ function ensureArray(value) {
     return Array.isArray(value) ? value : [value];
 }
 
+document.getElementById('lgout').addEventListener('click', function() {
+        document.cookie.split(";").forEach(function(cookie) {
+            const [name] = cookie.split("=");
+            document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/";
+    });
+        window.location.href = "/logout";
+});
 
 document.addEventListener("DOMContentLoaded", function () {
     const userId = getCookie("id"); // Replace this with dynamic logic to get the user ID if necessary
@@ -491,12 +498,11 @@ document.addEventListener("DOMContentLoaded", function () {
                         friendData=friendData[0]
                             if (friendData.username) {
                                 const friendElement = document.createElement("span");
-                                const LogoutElement = document.getElementById("lgparent")
                                 friendElement.innerHTML = `
                                     <img class="pfp" src="data:image/jpeg;base64,${friendData.image1}" alt="hehe">
                                     ${friendData.username}
                                 `;
-                                friendsWrapper.insertBefore(friendElement,LogoutElement);
+                                friendsWrapper.appendChild(friendElement);
                             }
                         })
                         .catch(error => console.error("Error fetching friend data:", error));

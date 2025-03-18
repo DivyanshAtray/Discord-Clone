@@ -107,7 +107,7 @@
         // Password Toggle
         const passwordField = document.getElementById("password");
         const togglePassword = document.getElementById("togglePassword");
-    
+
         togglePassword.addEventListener("click", function () {
             if (passwordField.type === "password") {
                 passwordField.type = "text";
@@ -119,7 +119,7 @@
                 this.style.color = "white";
             }
         });
-    
+
         // Crop modal elements
         const cropModal = document.getElementById('crop-modal');
         const cropImage = document.getElementById('crop-image');
@@ -130,7 +130,7 @@
         let currentInput = null;
         let currentAspectRatio = null;
         let cropData = null;
-    
+
         // Function to initialize Cropper.js
         const initializeCropper = (aspectRatio) => {
             if (cropImage.naturalWidth > 0 && cropImage.naturalHeight > 0) {
@@ -156,7 +156,7 @@
                 cropModal.style.display = 'none';
             }
         };
-    
+
         // Function to handle image selection and cropping
         const handleImageSelection = (input, filenameDisplay, previewImage, hiddenInput, aspectRatio) => {
             input.addEventListener('change', (e) => {
@@ -168,13 +168,13 @@
                     currentInput = input; // Track the current input
                     currentAspectRatio = aspectRatio; // Track the current aspect ratio
                     cropData = null;
-    
+
                     // Reset previous cropper
                     if (cropper) {
                         cropper.destroy();
                         cropper = null;
                     }
-    
+
                     // Ensure image is loaded before proceeding
                     cropImage.onload = () => {
                         console.log('cropImage loaded with src:', cropImage.src);
@@ -193,25 +193,25 @@
                 }
             });
         };
-    
+
         // Single event listener for crop confirmation
         cropConfirm.addEventListener('click', () => {
             console.log('Crop button clicked');
             console.log('Cropper:', cropper);
             console.log('Crop data:', cropData);
             console.log('Current input:', currentInput);
-    
+
             if (cropper && cropData && currentInput) {
                 loading.style.display = 'block';
                 cropConfirm.disabled = true;
-    
+
                 const formData = new FormData();
                 formData.append('image', currentInput.files[0]);
                 formData.append('crop_x', cropData.x);
                 formData.append('crop_y', cropData.y);
                 formData.append('crop_width', cropData.width);
                 formData.append('crop_height', cropData.height);
-    
+
                 fetch('/crop-gif', {
                     method: 'POST',
                     body: formData
@@ -228,12 +228,12 @@
                             filenameDisplay = document.getElementById('banner-filename');
                             hiddenInput = document.getElementById('image2-base64');
                         }
-    
+
                         // Display a clickable link with data-base64 attribute
                         filenameDisplay.innerHTML = `<a class="filename-link" href="#" data-base64="${data.base64}">${data.filename}</a>`;
                         // Store the base64 string in the hidden input
                         hiddenInput.value = data.base64;
-    
+
                         // Add click event to open the preview in a new tab
                         const link = filenameDisplay.querySelector('.filename-link');
                         link.addEventListener('click', (e) => {
@@ -280,36 +280,36 @@
                 alert('Please adjust the crop area before confirming.');
             }
         });
-    
+
         // PFP handling (1:1)
         const image1 = document.getElementById('image1');
         const pfpFilename = document.getElementById('pfp-filename');
         const pfpPreview = document.getElementById('pfp-preview');
         const image1Base64 = document.getElementById('image1-base64');
         handleImageSelection(image1, pfpFilename, pfpPreview, image1Base64, 1 / 1);
-    
+
         // Banner handling (16:9)
         const image2 = document.getElementById('image2');
         const bannerFilename = document.getElementById('banner-filename');
         const bannerPreview = document.getElementById('banner-preview');
         const image2Base64 = document.getElementById('image2-base64');
         handleImageSelection(image2, bannerFilename, bannerPreview, image2Base64, 16 / 9);
-    
+
         // Dismiss success messages after 3 seconds
         setTimeout(() => {
             document.querySelectorAll(".flash-message.success").forEach(msg => {
                 msg.remove();
             });
         }, 3000);
-    
+
         // Reduce opacity when error message appears
         const errorMsg = document.querySelector(".flash-message.error");
         const mainContent = document.querySelector(".main");
-    
+
         if (errorMsg) {
             mainContent.style.opacity = "0.5";
         }
-    
+
         // Restore opacity when error message is dismissed
         document.addEventListener("click", function (event) {
             if (errorMsg && !errorMsg.contains(event.target)) {
@@ -317,12 +317,12 @@
                 mainContent.style.opacity = "1";
             }
         });
-    
+
         // Form submission validation
         document.getElementById('upload-form').addEventListener('submit', function(e) {
             const image1Base64 = document.getElementById('image1-base64').value;
             const image2Base64 = document.getElementById('image2-base64').value;
-    
+
             // If images are uploaded but not cropped, prevent form submission
             if (image1.files.length > 0 && !image1Base64) {
                 e.preventDefault();

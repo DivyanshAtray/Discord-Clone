@@ -60,7 +60,6 @@ def get_user_data():
             }
         else:
             response = {"error": f"No user found with id {user_id}"}
-        print(response)
         conn.close()
         return jsonify(response), 200
 
@@ -92,7 +91,7 @@ def request_friend():
 
     try:
         # Check if there is already an incoming request from the same ID
-        cursor.execute('SELECT incoming_request FROM friends WHERE user_id = ?', (user_id,))
+        cursor.execute('SELECT incoming_request FROM friends WHERE user_id = ?', (friend_id,))
         incoming_requests = cursor.fetchone()
 
         if incoming_requests and incoming_requests[0]:  # If there are existing incoming requests
@@ -100,34 +99,38 @@ def request_friend():
             incoming_request_list = incoming_requests[0].split(',')
 
             # Check if the friendId is already in the incoming request list
-            if str(friend_id) in incoming_request_list:
+            if str(user_id) in incoming_request_list:
                 conn.close()
                 return jsonify(
-                    {"error": "A friend request from this user already exists. Please wait for them to respond."}), 400
+                    {"error": "You already sent this user a friend request. Please wait for them to respond."}), 400
 
         # Check if the friend is already in the user's friends list
-        cursor.execute('SELECT friends FROM friends WHERE user_id = ?', (user_id,))
+        cursor.execute('SELECT friends FROM friends WHERE user_id = ?', (friend_id,))
         friends_data = cursor.fetchone()
         if friends_data and friends_data[0]:  # If there are existing friends
             # Parse the delimited string into a list
             friends_list = friends_data[0].split(',')
 
-            if str(friend_id) in friends_list:
+            if str(user_id) in friends_list:
                 conn.close()
                 return jsonify({"error": "This user is already in your friends list."}), 400
 
         # Add the friendId to the incoming_request list
         if incoming_requests and incoming_requests[0]:
             # Append to the existing incoming_request string
-            incoming_request_list.append(str(friend_id))
+            incoming_request_list.append(str(user_id))
             updated_requests = ','.join(incoming_request_list)
             print(updated_requests)
-            cursor.execute('UPDATE friends SET incoming_request = ? WHERE user_id = ?', (updated_requests, user_id))
+            cursor.execute('UPDATE friends SET incoming_request = ? WHERE user_id = ?', (updated_requests, friend_id))
         else:
             print("new entry must be added ig")
             # Create a new incoming_request entry
-            cursor.execute('INSERT INTO friends(user_id,incoming_request) VALUES(?,?)', (user_id,str(friend_id) ))
-
+            cursor.execute('''SELECT friends FROM friends WHERE user_id=?''',(friend_id,))
+            frd = cursor.fetchone()
+            if not frd:
+                cursor.execute('INSERT INTO friends(user_id,incoming_request) VALUES(?,?)', (friend_id,str(user_id)  ))
+            else:
+                cursor.execute('UPDATE friends SET incoming_request = ? WHERE user_id = ?', (str(user_id), friend_id))
         conn.commit()
         conn.close()
         return jsonify({"status": "Friend request sent successfully."}), 200
@@ -140,18 +143,15 @@ def request_friend():
 
 @app.route('/add_friend')
 def add_friend():
-    print("im called")
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
     # Get the current user's ID
     cursor.execute('SELECT id FROM users WHERE username = ?', (session['username'],))
     user_id = cursor.fetchone()[0]
-    print(user_id)
 
     # Get the friend ID (the ID of the user sending the friend request)
     friend_id = request.args.get('id', type=int)
-    print(friend_id)
     # Check for missing parameters
     if not user_id or not friend_id:
         conn.close()
@@ -174,7 +174,11 @@ def add_friend():
 
         # Remove the friendId from the incoming request list
         incoming_request_list.remove(str(friend_id))
-        updated_requests = ','.join(incoming_request_list)
+        if not incoming_request_list:
+            print(incoming_request_list)
+            updated_requests = None
+        else:
+            updated_requests = ','.join(incoming_request_list)
 
         # Update the incoming_request list in the database
         cursor.execute('UPDATE friends SET incoming_request = ? WHERE user_id = ?', (updated_requests, user_id))
@@ -206,7 +210,8 @@ def add_friend():
             else:
                 updated_friend_friends = friend_friends[0]  # No change
         else:
-            updated_friend_friends = str(user_id)  # Create the new friends list if none exists
+            updated_friend_friends=str(user_id)
+            cursor.execute('INSERT INTO friends(user_id,friends) VALUES(?,?)', (friend_id, str(user_id)))
 
         # Update the friend's friends list
         cursor.execute('UPDATE friends SET friends = ? WHERE user_id = ?', (updated_friend_friends, friend_id))
@@ -367,7 +372,6 @@ def handle_send_message(data):
         "message": "Hello, everyone!"
     }
     """
-    print(data)
     username = data["username"]
     if username is None:
         return
