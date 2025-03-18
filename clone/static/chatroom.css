@@ -3,6 +3,36 @@
     margin: 0;
 }
 
+.replied-message .reply-label,
+.reply-preview .reply-label {
+    margin-top: 0 !important; /* Forcefully override the 20px margin */
+    margin: 0 !important; /* Reset all margins */
+    padding: 0 !important; /* Reset padding */
+    color: #b9bbbe !important; /* Match the color of replied-message */
+    font-family: "Noto Sans", sans-serif !important; /* Keep consistent font */
+    display: inline !important; /* Ensure inline behavior instead of flex */
+    align-items: normal !important; /* Reset align-items from flex */
+    height: auto !important; /* Reset height to avoid fixed sizing */
+    font-size: 0.9em !important; /* Match the parent font size */
+    font-weight: normal !important; /* Reset to normal weight */
+    line-height: 1; /* Ensure consistent line height */
+}
+
+/* Style for replied message */
+.replied-message {
+    background-color: #2f3136;
+    padding: 5px 10px;
+    margin-bottom: 5px;
+    border-left: 3px solid #5865f2;
+    cursor: pointer;
+    font-size: 0.9em;
+    color: #b9bbbe;
+    display: flex;
+    flex-wrap: nowrap; /* Prevent wrapping */
+    align-items: center; /* Vertically center the content */
+    gap: 5px; /* Add space between "Replying to" and username */
+}
+
 
 ::-webkit-scrollbar {
     width: 8px; /* Width of vertical scrollbar */
@@ -428,4 +458,118 @@ textarea{
         transition: ease-in-out 1s;
         border-radius: 100%;
         }
+}
+
+
+
+
+
+
+
+
+
+/* Style for each message container */
+.message {
+    position: relative;
+    padding: 10px;
+    margin: 5px 0;
+    display: flex;
+    align-items: flex-start;
+}
+
+/* Reply button (SVG) - hidden by default with opacity and visibility */
+.reply-btn {
+    opacity: 0;
+    visibility: hidden;
+    position: absolute;
+    left: -30px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    width: 20px;
+    height: 20px;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+/* Show reply button on hover with no delay */
+.message:hover .reply-btn {
+    opacity: 1;
+    visibility: visible;
+    transition-delay: 0s;
+}
+
+/* Delay the hide effect when hover ends */
+.message .reply-btn {
+    transition-delay: 0.5s;
+}
+
+/* Style for replied message */
+.replied-message {
+    background-color: #2f3136;
+    padding: 5px 10px;
+    margin-bottom: 5px;
+    border-left: 3px solid #5865f2;
+    cursor: pointer;
+    font-size: 0.9em;
+    color: #b9bbbe;
+    display: flex; /* Use flexbox for better control */
+    align-items: center; /* Vertically center the content */
+}
+
+/* Style for the username in the reply preview */
+.reply-username {
+    display: inline-block; /* Use inline-block to keep it on the same line while allowing width/height control */
+    font-weight: 600; /* Bold username */
+    color: #ffffff; /* White color for the username */
+    margin-left: 5px; /* Add a small space between "Replying to" and username */
+    white-space: nowrap; /* Prevent the username from wrapping to a new line */
+}
+
+/* Ensure the reply preview in the input bar is also aligned */
+.reply-preview {
+    background-color: #2f3136;
+    padding: 5px 10px;
+    margin-bottom: 5px;
+    border-left: 3px solid #5865f2;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9em;
+    color: #b9bbbe;
+}
+
+.reply-preview button {
+    background: none;
+    border: none;
+    color: #b9bbbe;
+    cursor: pointer;
+}
+
+.reply-preview button:hover {
+    color: #fff;
+}
+
+/* Ensure textarea adjusts when reply preview is visible */
+/* textarea {
+    width: 100%;
+    resize: none;
+    background-color: #40444b;
+    border: none;
+    color: #fff;
+    padding: 10px;
+    border-radius: 5px;
+} */
+
+.inputbar {
+    position: relative;
+}
+
+
+
+#replyToUsername:hover{
+    background:none;    
+}
+
+#replyMessageText{
+    display: none;
 }

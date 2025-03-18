@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Discord</title>
+
     <link rel="stylesheet" href="/static/login_page.css">
 
     <!-- Google Material Symbols for Eye Icon -->
@@ -12,12 +12,29 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+
+    <!-- Cropper.js 1.6.1 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+
+    <style>       
+
+        #loading {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .preview-image {
+            max-width: 100px;
+            max-height: 100px;
+            margin-top: 10px;
+            display: none; /* Initially hidden */
+        }
+    </style>
 </head>
 
 <body>
-
     <!-- Display Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
@@ -32,123 +49,290 @@
     {% endwith %}
 
     <div class="main">
-
         <div class="box">
-            <form action="/submit" method="post" enctype="multipart/form-data">
+            <form id="upload-form" action="/submit" method="post" enctype="multipart/form-data">
                 <p>Welcome!</p>
                 <p class="sec">We are excited to see you!</p>
-
+            
                 <label for="username">Username*</label><br>
                 <input type="text" id="username" name="username" required><br><br>
-
+            
                 <label for="password">Password</label><br>
                 <div class="password-container">
                     <input type="password" id="password" name="password" required>
                     <span id="togglePassword" class="material-symbols-outlined">visibility</span>
-                </div>
-                <br><br>
-
+                </div><br><br>
+            
                 <label for="image1">Upload pfp:</label><br>
-                <input type="file" id="image1" name="image1" accept="image/gif, image/png, image/jpeg"><br><br>
-
+                <input type="file" id="image1" name="image1" accept="image/gif, image/png, image/jpeg"><br>
+                <div class="preview-container">
+                    <span id="pfp-filename"></span>
+                    <img id="pfp-preview" class="preview-image">
+                </div>
+                <input type="hidden" id="image1-base64" name="image1-base64">
+                <br>
+            
                 <label for="image2">Upload banner:*</label><br>
                 <input type="file" id="image2" name="image2" accept="image/gif, image/png, image/jpeg"><br>
-
-                <a href="/"><button type="submit">Login</button></a>
+                <div class="preview-container">
+                    <span id="banner-filename"></span>
+                    <img id="banner-preview" class="preview-image">
+                </div>
+                <input type="hidden" id="image2-base64" name="image2-base64">
+                <br>
+            
+                <button type="submit">Login</button>
             </form>
             <div class="left">
                 <img src="https://mail-attachment.googleusercontent.com/attachment/u/1/?ui=2&ik=bb9a3c5b0a&attid=0.1&permmsgid=msg-a:r2342668689817390098&th=195945de3cc48835&view=att&disp=inline&realattid=f_m88ctaxs0&zw&saddbat=ANGjdJ89tIa0fk3KW8GRtAd8lDP2SKABE1C83M6Iq-aU-FYa1kw8cVFXRIO3wYrUrBiiramCtZiOkJ4HKsu854Iwxm7gTrJ5-K4D-VL5-JgnoZGpnioc00m649VPPZ4L9d2jcbc6LrwrW0AIPFHogiiwyjU6pycse8xruTGHwmrKFcUv-IFwtnCa3bR70-YC6cvH0PJnG7YVkxvdFl9aWM2Fn1Ay2p6PV0PMbqhsHZ63xxSItwWIu1twbqCJfUC5gnNWRzAMm3csyAyvkJIuZ_3ZUTJs3xsoK59ckvVQmt4GvMV4QNBFoW4Ed385kA9RjYdNUHnFCx-zUkOqkKIhswPgp8ukYRKLjMyYKsrMwLjvxwT4IsG1MbxYM4kt5NOzYw2UOzX8nBsSDj8ojDd19hcPed0p3JSnQ4gd4RA0hP_dZhbOU5_coHCpMGE2svXjp7QY-QQpZwW1RLOGPSdHy3ZTbWDqKtrUHVSKd92mWSCeK4MTXQcdSWeBXElYkXOP7AYeuNx_j85NQSAQ8VdS1AIHSc56JHny96qAM-bY-dDC-TQA1RW5DmUEEu_bzmTrqX3mU2P6SHeqBUANbTKrHoTqWAqiAEig6bEQc_EOsmFUSQj7qQ3Es1aNBYIfy-6czPhTK0KCubv-lmpgmAO0Pod-OTVDrRRV85hnKlb0vms1_ZJTg60Xm4HU58ilyp1TbIYSQjouRq5JP2KUxDsOd0R0dv-p4MX7BRdZMoUWs1omU4VgCW2uS8W0GechmcWrBwIXSYJTN2KW3uPhb6Qo6NUcYEToyTnX2NGfNKyVO1jsqaGMIYed0L-oCOCLNkZPAg1LkZvBRinWXzIhd2opgWpXEEaR2C9dD3KxKrnnqdmT6VgjbcXEtHXaNbAiyglmzzCp9pjPPDbVpX_GWp4i8UqqHMG-YRhtWRmGxNT3ZkhSmrsF3F6y5wr4Gbgglrylsyd8KDjhYtXsr6IcJqkf83fP2BIgAm9Le2nkI2Jh5_Y2XGYgiAD9f-9SONNM3Q7pecdSDl_g1Pd0lo1-6HzOO3ckKOi-QanmuVmz_BOkGQ" alt="qr code">
                 <p>Login with QR code</p>
             </div>
         </div>
+
+        <div id="crop-modal" class="crop-modal">
+            <div class="crop-container">
+                <div id="crop-note" style="color: white; text-align: center; margin-bottom: 10px; display: none;">
+                    Note: Select the crop area on the first frame. The entire GIF will be cropped accordingly on the server.
+                </div>
+                <img id="crop-image" alt="Crop Image">
+                <button id="crop-confirm">Crop and Process</button>
+                <div id="loading" style="display: none; color: white; text-align: center; margin-top: 10px;">
+                    Processing GIF on server... Please wait.
+                </div>
+            </div>
+        </div>
     </div>
 
-</body>
+    <script>
+        // Password Toggle
+        const passwordField = document.getElementById("password");
+        const togglePassword = document.getElementById("togglePassword");
 
-</html>
-
-<script>
-    // Password Toggle
-    const passwordField = document.getElementById("password");
-    const togglePassword = document.getElementById("togglePassword");
-
-    togglePassword.addEventListener("click", function () {
-        if (passwordField.type === "password") {
-            passwordField.type = "text";
-            this.textContent = "visibility_off"; // Change icon when active
-            this.style.color = "gray";
-        } else {
-            passwordField.type = "password";
-            this.textContent = "visibility"; // Change icon back
-            this.style.color = "white";
-        }
-    });
-
-    // Dismiss success messages after 3 seconds
-    setTimeout(() => {
-        document.querySelectorAll(".flash-message.success").forEach(msg => {
-            msg.remove();
+        togglePassword.addEventListener("click", function () {
+            if (passwordField.type === "password") {
+                passwordField.type = "text";
+                this.textContent = "visibility_off";
+                this.style.color = "gray";
+            } else {
+                passwordField.type = "password";
+                this.textContent = "visibility";
+                this.style.color = "white";
+            }
         });
-    }, 3000);
 
-    // Reduce opacity when error message appears
-    const errorMsg = document.querySelector(".flash-message.error");
-    const mainContent = document.querySelector(".main");
-    const bodyContent = document.body;
+        // Crop modal elements
+        const cropModal = document.getElementById('crop-modal');
+        const cropImage = document.getElementById('crop-image');
+        const cropConfirm = document.getElementById('crop-confirm');
+        const cropNote = document.getElementById('crop-note');
+        const loading = document.getElementById('loading');
+        let cropper = null;
+        let currentInput = null;
+        let currentAspectRatio = null;
+        let cropData = null;
 
+        // Function to initialize Cropper.js
+        const initializeCropper = (aspectRatio) => {
+            if (cropImage.naturalWidth > 0 && cropImage.naturalHeight > 0) {
+                console.log('Initializing Cropper.js with aspect ratio:', aspectRatio);
+                setTimeout(() => {
+                    cropper = new Cropper(cropImage, {
+                        aspectRatio: aspectRatio,
+                        viewMode: 1,
+                        autoCrop: true,
+                        autoCropArea: 0.8,
+                        ready: function() {
+                            console.log('Cropper ready');
+                        },
+                        crop: function(event) {
+                            console.log('Crop area adjusted:', event.detail);
+                            cropData = event.detail;
+                        }
+                    });
+                }, 100);
+            } else {
+                console.error('Image not fully loaded for cropping');
+                alert('Image not fully loaded. Please try again.');
+                cropModal.style.display = 'none';
+            }
+        };
 
-    if (errorMsg) {
-        mainContent.style.opacity = "0.5"; // Reduce opacity
-    }
+        // Function to handle image selection and cropping
+        const handleImageSelection = (input, filenameDisplay, previewImage, hiddenInput, aspectRatio) => {
+            input.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const url = URL.createObjectURL(file);
+                    cropImage.src = url;
+                    cropModal.style.display = 'flex';
+                    currentInput = input; // Track the current input
+                    currentAspectRatio = aspectRatio; // Track the current aspect ratio
+                    cropData = null;
 
-    // Restore opacity when error message is dismissed
-    document.addEventListener("click", function (event) {
-        if (errorMsg && !errorMsg.contains(event.target)) {
-            errorMsg.remove();
-            mainContent.style.opacity = "1"; // Restore opacity
+                    // Reset previous cropper
+                    if (cropper) {
+                        cropper.destroy();
+                        cropper = null;
+                    }
+
+                    // Ensure image is loaded before proceeding
+                    cropImage.onload = () => {
+                        console.log('cropImage loaded with src:', cropImage.src);
+                        if (file.type === 'image/gif') {
+                            cropNote.style.display = 'block';
+                        } else {
+                            cropNote.style.display = 'none';
+                        }
+                        initializeCropper(currentAspectRatio);
+                    };
+                    cropImage.onerror = () => {
+                        console.error('Error loading image:', cropImage.src);
+                        alert('Error loading image. Please try again.');
+                        cropModal.style.display = 'none';
+                    };
+                }
+            });
+        };
+
+        // Single event listener for crop confirmation
+        cropConfirm.addEventListener('click', () => {
+            console.log('Crop button clicked');
+            console.log('Cropper:', cropper);
+            console.log('Crop data:', cropData);
+            console.log('Current input:', currentInput);
+
+            if (cropper && cropData && currentInput) {
+                loading.style.display = 'block';
+                cropConfirm.disabled = true;
+
+                const formData = new FormData();
+                formData.append('image', currentInput.files[0]);
+                formData.append('crop_x', cropData.x);
+                formData.append('crop_y', cropData.y);
+                formData.append('crop_width', cropData.width);
+                formData.append('crop_height', cropData.height);
+
+                fetch('/crop-gif', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Determine which input this crop applies to
+                        let filenameDisplay, hiddenInput;
+                        if (currentInput.id === 'image1') {
+                            filenameDisplay = document.getElementById('pfp-filename');
+                            hiddenInput = document.getElementById('image1-base64');
+                        } else if (currentInput.id === 'image2') {
+                            filenameDisplay = document.getElementById('banner-filename');
+                            hiddenInput = document.getElementById('image2-base64');
+                        }
+
+                        // Display a clickable link with data-base64 attribute
+                        filenameDisplay.innerHTML = `<a class="filename-link" href="#" data-base64="${data.base64}">${data.filename}</a>`;
+                        // Store the base64 string in the hidden input
+                        hiddenInput.value = data.base64;
+
+                        // Add click event to open the preview in a new tab
+                        const link = filenameDisplay.querySelector('.filename-link');
+                        link.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            const base64Data = link.getAttribute('data-base64');
+                            const newTab = window.open('', '_blank');
+                            if (newTab) {
+                                newTab.document.write(`
+                                    <html>
+                                        <body>
+                                            <img src="data:image/gif;base64,${base64Data}" style="max-width: 100%; max-height: 100vh;">
+                                        </body>
+                                    </html>
+                                `);
+                                newTab.document.close();
+                            } else {
+                                alert('Please allow popups for this site to view the preview.');
+                            }
+                        });
+                    } else {
+                        alert('Error processing GIF: ' + data.error);
+                    }
+                    loading.style.display = 'none';
+                    cropConfirm.disabled = false;
+                    cropModal.style.display = 'none';
+                    if (cropper) {
+                        cropper.destroy();
+                        cropper = null;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error during fetch:', error);
+                    alert('Error submitting crop request: ' + error.message);
+                    loading.style.display = 'none';
+                    cropConfirm.disabled = false;
+                    cropModal.style.display = 'none';
+                    if (cropper) {
+                        cropper.destroy();
+                        cropper = null;
+                    }
+                });
+            } else {
+                console.error('Cropper, crop data, or current input is not initialized');
+                alert('Please adjust the crop area before confirming.');
+            }
+        });
+
+        // PFP handling (1:1)
+        const image1 = document.getElementById('image1');
+        const pfpFilename = document.getElementById('pfp-filename');
+        const pfpPreview = document.getElementById('pfp-preview');
+        const image1Base64 = document.getElementById('image1-base64');
+        handleImageSelection(image1, pfpFilename, pfpPreview, image1Base64, 1 / 1);
+
+        // Banner handling (16:9)
+        const image2 = document.getElementById('image2');
+        const bannerFilename = document.getElementById('banner-filename');
+        const bannerPreview = document.getElementById('banner-preview');
+        const image2Base64 = document.getElementById('image2-base64');
+        handleImageSelection(image2, bannerFilename, bannerPreview, image2Base64, 16 / 9);
+
+        // Dismiss success messages after 3 seconds
+        setTimeout(() => {
+            document.querySelectorAll(".flash-message.success").forEach(msg => {
+                msg.remove();
+            });
+        }, 3000);
+
+        // Reduce opacity when error message appears
+        const errorMsg = document.querySelector(".flash-message.error");
+        const mainContent = document.querySelector(".main");
+
+        if (errorMsg) {
+            mainContent.style.opacity = "0.5";
         }
-    });
-</script>
 
-<style>
-    /* Flash Messages */
-    .flash-message {
-        padding: 15px;
-        color: white;
-        font-size: 16px;
-        font-weight: bold;
-        border-radius: 5px;
-        cursor: pointer;
-        transition: opacity 0.3s ease-in-out;
-    }
+        // Restore opacity when error message is dismissed
+        document.addEventListener("click", function (event) {
+            if (errorMsg && !errorMsg.contains(event.target)) {
+                errorMsg.remove();
+                mainContent.style.opacity = "1";
+            }
+        });
 
-    /* Error Messages (Centered) */
-    .flash-message.error {
-        background-color: #211e22;
-        color: aliceblue;
-        font-family: 'Courier New', Courier, monospace;
-        font-size: large;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 50%;
-        max-width: 400px;
-        text-align: center;
-        z-index: 1000;
-    }
+        // Form submission validation
+        document.getElementById('upload-form').addEventListener('submit', function(e) {
+            const image1Base64 = document.getElementById('image1-base64').value;
+            const image2Base64 = document.getElementById('image2-base64').value;
 
-    /* Success Messages (Notification Style) */
-    .flash-message.success {
-        display: none;
-        
-    }
-
-    /* Reduce opacity when error message appears */
-    .main {
-        transition: opacity 0.3s ease-in-out;
-    }
-</style>
+            // If images are uploaded but not cropped, prevent form submission
+            if (image1.files.length > 0 && !image1Base64) {
+                e.preventDefault();
+                alert('Please crop the profile picture before submitting.');
+            }
+            if (image2.files.length > 0 && !image2Base64) {
+                e.preventDefault();
+                alert('Please crop the banner image before submitting.');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -81,63 +81,26 @@ const sendButton = document.querySelector(".send");
 const messagesContainer = document.querySelector(".messages");
 const fileInput = document.getElementById("fileInput");
 const attachmentButton = document.querySelector(".attachment");
+
+
+
+const replyPreview = document.getElementById("replyPreview");
+const replyToUsername = document.getElementById("replyToUsername");
+const replyMessageText = document.getElementById("replyMessageText");
+const cancelReply = document.getElementById("cancelReply");
+let replyToMessageId = null; // To track the message being replied to
+
+
+
 const socket = io.connect();
 let selectedFile = null;
 
 
 socket.on('connect', function () { console.log("connected") });
 socket.on('disconnect', function () { console.log("disconnected") });
-function sendMessage() {
-    const messageText = inputField.value.trim();
 
-    // Check if there is no message text and no selected file, then return.
-    if (messageText === "" && !selectedFile) return;
 
-    const userMessageDiv = document.createElement("div");
-    userMessageDiv.classList.add("message", "user-message");
 
-    const formData = new FormData(); // Create FormData object for API request
-    if (selectedFile) {
-        formData.append("file", selectedFile);
-
-        // Show file upload preview in the chat
-        const fileURL = URL.createObjectURL(selectedFile);
-        userMessageDiv.innerHTML = `<a href="${fileURL}" target="_blank">${selectedFile.name}</a>`;
-        selectedFile = null;
-    }
-
-    if (messageText !== "") {
-        formData.append("message", messageText); // Add message to FormData
-        userMessageDiv.innerHTML += formatMessage(messageText); // Append message to chat
-    }
-
-    messagesContainer.appendChild(userMessageDiv);
-
-    // Send the FormData to the API endpoint
-    fetch("/send_message", {
-        method: "POST",
-        body: formData // FormData object includes both file and message
-    }).then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                // Emit the socket event after the message is successfully sent
-                const USER = getCookie("username");
-                socket.emit("send_message", { message: messageText, username: USER });
-            }
-        });
-
-    // Clear input field after sending
-    inputField.value = "";
-}
-
-// Redirect to the logout route
-document.getElementById('lgout').addEventListener('click', function() {
-        document.cookie.split(";").forEach(function(cookie) {
-            const [name] = cookie.split("=");
-            document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/";
-    });
-        window.location.href = "/logout";
-});
 
 // Function to format messages (Bold, Italics, Code Blocks)
 function formatMessage(text) {
@@ -216,22 +179,41 @@ function downloadFile(url, filename) {
 
 
 socket.on("broadcast_message", (data) => {
-    // Automatically called when the server emits "broadcast_message"
     const USER = getCookie("username");
-
     const username = data.username || "Anonymous";
     const message = data.message || "";
-    if (username == USER) {
-    } else {
+    const replyTo = data.replyTo;
+
+    if (username !== USER) {
         const botMessageDiv = document.createElement("div");
         botMessageDiv.classList.add("message", "bot-message");
-        botMessageDiv.innerHTML = formatMessage(message);
+        botMessageDiv.dataset.messageId = Date.now(); // Unique ID
+
+        // Add replied message if it exists
+        if (replyTo) {
+            const originalMessage = messagesContainer.querySelector(`[data-message-id="${replyTo}"] .message-content`)?.textContent || "Original message";
+            botMessageDiv.innerHTML += `
+                <div class="replied-message" data-reply-to="${replyTo}">
+                    Replying to ${username}: ${originalMessage}
+                </div>
+            `;
+        }
+
+        botMessageDiv.innerHTML += formatMessage(message);
+
+        // Add reply SVG button
+        const replySvg = document.createElement("img");
+        replySvg.classList.add("reply-btn");
+        replySvg.src = "/static/reply.svg"; // Ensure you have a reply.svg file
+        replySvg.alt = "Reply";
+        replySvg.addEventListener("click", () => handleReply(botMessageDiv.dataset.messageId, username, message));
+        botMessageDiv.appendChild(replySvg);
+
         messagesContainer.appendChild(botMessageDiv);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        scrollToBottom();
         renderLatex();
     }
 });
-
 
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -282,32 +264,67 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 
-
 function sendMessage() {
     const messageText = inputField.value.trim();
     if (messageText === "" && !selectedFile) return;
 
     const userMessageDiv = document.createElement("div");
     userMessageDiv.classList.add("message", "user-message");
+    userMessageDiv.dataset.messageId = Date.now(); // Unique ID for each message
 
-    if (messageText !== "") {
-        userMessageDiv.innerHTML = formatMessage(messageText);
+    const formData = new FormData();
+    if (selectedFile) {
+        formData.append("file", selectedFile);
+        const fileURL = URL.createObjectURL(selectedFile);
+        userMessageDiv.innerHTML = `<a href="${fileURL}" target="_blank">${selectedFile.name}</a>`;
+        selectedFile = null;
     }
 
-    messagesContainer.appendChild(userMessageDiv);
-    scrollToBottom(); // Auto-scroll after sending a message
-    dataToSend= new FormData()
-    dataToSend.append("message",messageText)
+    if (messageText !== "") {
+        formData.append("message", messageText);
+        let formattedMessage = formatMessage(messageText);
+
+        // Add replied message preview if replying
+        if (replyToMessageId) {
+            userMessageDiv.innerHTML += `
+                <div class="replied-message" data-reply-to="${replyToMessageId}">
+                    <span class="reply-label">Replying to</span> <div class="reply-username">${getCookie("username")}</div>
+                </div>
+            `;
+        }
+        userMessageDiv.innerHTML += formattedMessage;
+    }
+
+    // Add reply SVG button
+    const replySvg = document.createElement("img");
+    replySvg.classList.add("reply-btn");
+    replySvg.src = "/static/reply.svg"; // Ensure you have a reply.svg file
+    replySvg.alt = "Reply";
+    replySvg.addEventListener("click", () => {
+        const originalMessage = userMessageDiv.querySelector(".message-content")?.textContent || messageText;
+        handleReply(userMessageDiv.dataset.messageId, getCookie("username"), originalMessage);
+    });
+    userMessageDiv.appendChild(replySvg);
+
+    messagesContainer.appendChild(userMessageDiv); // Append to the end
+    scrollToBottom();
+
+    formData.append("replyTo", replyToMessageId || "");
     fetch("/send_message", {
         method: "POST",
-        body: dataToSend
-    }).then(() => {
-        const USER = getCookie("username");
-        socket.emit("send_message", { message: messageText, username: USER });
-    });
+        body: formData
+    }).then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                const USER = getCookie("username");
+                socket.emit("send_message", { message: messageText, username: USER, replyTo: replyToMessageId });
+            }
+        });
 
-    inputField.value = ""; // Clear input field
-    scrollToBottom();
+    inputField.value = "";
+    autoResizeTextarea(inputField);
+    replyToMessageId = null;
+    replyPreview.style.display = "none";
 }
 
 async function sendFriendRequest(friendId) {
@@ -377,17 +394,38 @@ socket.on("broadcast_message", (data) => {
     const USER = getCookie("username");
     const username = data.username || "Anonymous";
     const message = data.message || "";
+    const replyTo = data.replyTo;
 
     if (username !== USER) {
         const botMessageDiv = document.createElement("div");
         botMessageDiv.classList.add("message", "bot-message");
-        botMessageDiv.innerHTML = formatMessage(message);
-        messagesContainer.appendChild(botMessageDiv);
+        botMessageDiv.dataset.messageId = Date.now(); // Unique ID
 
-        scrollToBottom(); // Auto-scroll when receiving a message
+        if (replyTo) {
+            botMessageDiv.innerHTML += `
+                <div class="replied-message" data-reply-to="${replyTo}">
+                    <span class="reply-label">Replying to</span> <div class="reply-username">${username}</div>
+                </div>
+            `;
+        }
+
+        botMessageDiv.innerHTML += formatMessage(message);
+
+        // Add reply SVG button
+        const replySvg = document.createElement("img");
+        replySvg.classList.add("reply-btn");
+        replySvg.src = "/static/reply.svg"; // Ensure you have a reply.svg file
+        replySvg.alt = "Reply";
+        replySvg.addEventListener("click", () => handleReply(botMessageDiv.dataset.messageId, username, message));
+        botMessageDiv.appendChild(replySvg);
+
+        messagesContainer.appendChild(botMessageDiv); // Append to the end
+        scrollToBottom();
         renderLatex();
     }
 });
+
+
 
 
 function scrollToBottom() {
@@ -427,77 +465,13 @@ function ensureArray(value) {
     return Array.isArray(value) ? value : [value];
 }
 
-//
-//document.addEventListener("DOMContentLoaded", function () {
-//    const userId = getCookie("id"); // Replace this with dynamic logic to get the user ID if necessary
-//    console.log(userId);
-//    const friendsWrapper = document.getElementById("friendsWrapper");
-//    const friendRequestsList = document.getElementById("friendRequestsList");
-//
-//    // Fetch friends and incoming requests
-//    fetch(`/get-friend-data?id=${userId}`)
-//        .then(response => response.json())
-//        .then(data => {
-//            // Handle friends
-//            const friends = data.friends;
-//            console.log(friends);
-//            if (friends && friends.length > 0) {
-//                friends.forEach(friend => {
-//                    // Fetch individual friend's data
-//                    fetch(`/profile?id=${friend}`)
-//                        .then(response => response.json())
-//                        .then(friendData => {
-//                            if (friendData.username) {
-//                                const friendElement = document.createElement("span");
-//                                friendElement.className = "dms";
-//                                friendElement.innerHTML = `
-//                                    <img class="pfp" src="${friendData.profile_picture}" alt="hehe">
-//                                    ${friendData.username}
-//                                `;
-//                                friendsWrapper.appendChild(friendElement);
-//                            }
-//                        })
-//                        .catch(error => console.error("Error fetching friend data:", error));
-//                });
-//            } else {
-//                console.log("no biches lol");
-//            }
-//
-//            // Handle incoming requests
-//            let incomingRequests = data.incoming_request;
-//            incomingRequests = incomingRequests.split(",").map(Number)
-//            incomingRequests = ensureArray(incomingRequests);
-//            console.log(incomingRequests);
-//
-//
-//            if (incomingRequests && incomingRequests.length > 0) {
-//                incomingRequests.forEach(requestId => {
-//                console.log(requestId)
-//                    // Fetch the requester's username
-//                    fetch(`/profile?id=${requestId}`)
-//                        .then(response => response.json())
-//                        .then(requesterData => {
-//                        requesterData=requesterData[0]
-//                            if (requesterData.username) {
-//                                const requestElement = document.createElement("div");
-//                                requestElement.className = "friend-request";
-//                                requestElement.innerHTML = `
-//                                    <span>${requesterData.username}</span>
-//                                    <img class="accept-btn" src="/static/accept.svg" alt="Accept">
-//                                    <img class="deny-btn" src="/static/deny.svg" alt="Deny">
-//                                `;
-//                                friendRequestsList.appendChild(requestElement);
-//                            }
-//                        })
-//                        .catch(error => console.error("Error fetching requester data:", error));
-//                });
-//            } else {
-//                console.log("no incoming requests");
-//                friendRequestsList.innerHTML = "<div>No incoming requests</div>";
-//            }
-//        })
-//        .catch(error => console.error("Error fetching friends and requests:", error));
-//});
+document.getElementById('lgout').addEventListener('click', function() {
+        document.cookie.split(";").forEach(function(cookie) {
+            const [name] = cookie.split("=");
+            document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/";
+    });
+        window.location.href = "/logout";
+});
 
 document.addEventListener("DOMContentLoaded", function () {
     const userId = getCookie("id"); // Replace this with dynamic logic to get the user ID if necessary
@@ -615,5 +589,41 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
             })
             .catch(error => console.error(`Error with ${url}:`, error));
+    }
+});
+
+
+
+
+
+
+
+
+
+
+function handleReply(messageId, username, messageText) {
+    replyToMessageId = messageId;
+    replyToUsername.innerHTML = `<span class="reply-label">Replying to</span> <div class="reply-username">${username}</div>`;
+    replyMessageText.textContent = messageText.length > 50 ? messageText.substring(0, 50) + "..." : messageText;
+    replyPreview.style.display = "block";
+    inputField.focus();
+}
+
+cancelReply.addEventListener("click", () => {
+    replyToMessageId = null;
+    replyPreview.style.display = "none";
+    inputField.value = "";
+    autoResizeTextarea(inputField);
+});
+
+
+messagesContainer.addEventListener("click", (e) => {
+    const repliedMessage = e.target.closest(".replied-message");
+    if (repliedMessage) {
+        const originalMessageId = repliedMessage.dataset.replyTo;
+        const originalMessage = messagesContainer.querySelector(`[data-message-id="${originalMessageId}"]`);
+        if (originalMessage) {
+            originalMessage.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
     }
 });

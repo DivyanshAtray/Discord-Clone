@@ -88,7 +88,19 @@
 
             <div class="messages"></div>
 
+
+
             <div class="inputbar">
+                <!-- <textarea type="text" id="messageInput" placeholder="Message..."></textarea>
+                <input type="file" id="fileInput" style="display: none;">
+                <img class="send" src="/static/send.svg" alt="send">
+                <img class="attachment" src="/static/attachment.svg" alt="attachment"> -->
+
+                <div class="reply-preview" id="replyPreview" style="display: none;">
+                    <span> <span id="replyToUsername"></span></span>
+                    <p id="replyMessageText"></p>
+                    <button id="cancelReply">✖</button>
+                </div>
                 <textarea type="text" id="messageInput" placeholder="Message..."></textarea>
                 <input type="file" id="fileInput" style="display: none;">
                 <img class="send" src="/static/send.svg" alt="send">
