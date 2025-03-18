@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
-    <link rel="stylesheet" href="actual_login.css">
+    <link rel="stylesheet" href="/static/actual_login.css">
 
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />
 
@@ -15,7 +15,7 @@
 
 <body>
     <!-- Display Flash Messages -->
-    <!-- {% with messages = get_flashed_messages(with_categories=true) %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
     <div class="flash-messages">
         {% for category, message in messages %}
@@ -25,11 +25,11 @@
         {% endfor %}
     </div>
     {% endif %}
-    {% endwith %} -->
+    {% endwith %}
 
     <div class="main">
         <div class="box">
-            <form id="upload-form" action="/submit" method="post" enctype="multipart/form-data">
+            <form id="upload-form" action="/login" method="post" enctype="multipart/form-data">
                 <p>Welcome!</p>
                 <p class="sec">We are excited to see you!</p>
             
@@ -65,7 +65,29 @@
                     this.textContent = "visibility";
                     this.style.color = "white";
                 }
-            });</script>
+                });
+        setTimeout(() => {
+            document.getElementsByClassName("error").forEach(msg => {
+                msg.remove();
+            });
+        }, 3000);
+
+        // Reduce opacity when error message appears
+        const errorMsg = document.querySelector(".flash-message.error");
+        const mainContent = document.querySelector(".main");
+
+        if (errorMsg) {
+            mainContent.style.opacity = "0.5";
+        }
+
+        // Restore opacity when error message is dismissed
+        document.addEventListener("click", function (event) {
+            if (errorMsg && !errorMsg.contains(event.target)) {
+                errorMsg.remove();
+                mainContent.style.opacity = "1";
+            }
+        });
+            </script>
 
 
 </body>

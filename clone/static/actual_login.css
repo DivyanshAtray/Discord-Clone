@@ -219,3 +219,40 @@ body::before {
         display: none;
     }
 }
+
+
+/* Flash Messages */
+.flash-message {
+    padding: 15px;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: opacity 0.3s ease-in-out;
+}
+
+/* Error Messages (Centered) */
+.flash-message.error {
+    background-color: #211e22;
+    color: aliceblue;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: large;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 50%;
+    max-width: 400px;
+    text-align: center;
+    z-index: 1000;
+}
+
+/* Success Messages (Notification Style) */
+.flash-message.success {
+    display: none;
+
+}

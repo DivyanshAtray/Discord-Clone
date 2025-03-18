@@ -140,7 +140,9 @@ def request_friend():
         print(e)
         return jsonify({"error": str(e)}), 500
 
-
+@app.route('/login')
+def login():
+    return render_template('actual_login.html')
 @app.route('/add_friend')
 def add_friend():
     conn = sqlite3.connect(db_path)
@@ -227,9 +229,6 @@ def add_friend():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route('/login')
-def login_page():
-    return render_template('login_page.html')
 
 @app.route('/profile',methods=['GET'])
 def profile():
@@ -257,7 +256,7 @@ def logout():
     # Clear the user session
     session.pop('username', None)
     # Redirect to the login page
-    return redirect(url_for('login_page'))
+    return redirect('/login')
 
 @app.route('/messages', methods=['GET'])
 def get_last_messages():
@@ -306,44 +305,46 @@ def submit():
     # Check if user already exists
     conn = sqlite3.connect("db.db")
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, password))
+    cursor.execute("SELECT * FROM users WHERE username = ? ", (username,))
     existing_user = cursor.fetchone()
 
     if existing_user:
-        # Check for the password
-        cursor.execute("SELECT password FROM users WHERE username = ?", (username,))
-        pwd = cursor.fetchone()
-        if pwd[0] == password:
-            session['username'] = username
-            return redirect("/")
-        else:
-            flash("User already exists. Please log in.","error")
-            return redirect(url_for('login_page'))
+        flash("User already exists. Please log in.","error")
+        return redirect('/login')
     else:
-        cursor.execute("SELECT username FROM users WHERE username = ?", (username,))
-        user = cursor.fetchone()
-        if user:
-            flash("User already exists. Please log in.","error")
-            return redirect(url_for('login_page'))
-        else:
         # If user doesn't exist, register them
-            cursor.execute("INSERT INTO users (username, password, image1, image2) VALUES (?, ?, ?, ?)",
+        cursor.execute("INSERT INTO users (username, password, image1, image2) VALUES (?, ?, ?, ?)",
                            (username, password, sqlite3.Binary(image1_blob) if image1_blob else None, sqlite3.Binary(image2_blob) if image2_blob else None))
-            conn.commit()
-            conn.close()
+        conn.commit()
+        conn.close()
 
     session['username'] = username  # Save user in session
     flash("Login successful!", "success")
     return redirect(url_for('chatroom'))
 
+@app.route('/login', methods=['POST'])
+def login_post():
+    username = request.form['username']
+    password = request.form['password']
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, password))
+    existing_user = cursor.fetchone()
+    if existing_user:
+        session['username'] = username
+        return redirect("/")
+    else:
+        flash("Pls Signup!!","error")
 
-
+@app.route('/signup')
+def signup():
+    return render_template('signup.html')
 @app.route('/')
 def chatroom():
     # Check if user is logged in
     if 'username' not in session:
         flash("Please log in to access the chatroom.","error")
-        return redirect(url_for('login_page'))
+        return redirect('/login')
 
     return render_template('chatroom.html', username=session['username'])
 
