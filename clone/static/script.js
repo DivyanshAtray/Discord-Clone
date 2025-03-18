@@ -264,19 +264,22 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 
-function sendMessage() {
+async function sendMessage() {
     const messageText = inputField.value.trim();
     if (messageText === "" && !selectedFile) return;
 
     const userMessageDiv = document.createElement("div");
     userMessageDiv.classList.add("message", "user-message");
-    userMessageDiv.dataset.messageId = Date.now(); // Unique ID for each message
+    userMessageDiv.dataset.messageId = Date.now();
+
+    const messageContent = document.createElement("div");
+    messageContent.classList.add("message-content");
 
     const formData = new FormData();
     if (selectedFile) {
         formData.append("file", selectedFile);
         const fileURL = URL.createObjectURL(selectedFile);
-        userMessageDiv.innerHTML = `<a href="${fileURL}" target="_blank">${selectedFile.name}</a>`;
+        messageContent.innerHTML = `<a href="${fileURL}" target="_blank">${selectedFile.name}</a>`;
         selectedFile = null;
     }
 
@@ -284,29 +287,50 @@ function sendMessage() {
         formData.append("message", messageText);
         let formattedMessage = formatMessage(messageText);
 
-        // Add replied message preview if replying
         if (replyToMessageId) {
-            userMessageDiv.innerHTML += `
+            messageContent.innerHTML += `
                 <div class="replied-message" data-reply-to="${replyToMessageId}">
                     <span class="reply-label">Replying to</span> <div class="reply-username">${getCookie("username")}</div>
                 </div>
             `;
         }
-        userMessageDiv.innerHTML += formattedMessage;
+        messageContent.innerHTML += formattedMessage;
     }
 
-    // Add reply SVG button
+    // Add reply SVG
     const replySvg = document.createElement("img");
     replySvg.classList.add("reply-btn");
-    replySvg.src = "/static/reply.svg"; // Ensure you have a reply.svg file
+    replySvg.src = "/static/reply.svg";
     replySvg.alt = "Reply";
     replySvg.addEventListener("click", () => {
-        const originalMessage = userMessageDiv.querySelector(".message-content")?.textContent || messageText;
+        const originalMessage = messageContent.textContent || messageText;
         handleReply(userMessageDiv.dataset.messageId, getCookie("username"), originalMessage);
     });
-    userMessageDiv.appendChild(replySvg);
 
-    messagesContainer.appendChild(userMessageDiv); // Append to the end
+    // Fetch user's profile picture
+    const userId = getCookie("id");
+    let profilePicSrc = "/static/default-avatar.png"; // Fallback image
+    try {
+        const response = await fetch(`/profile?id=${userId}`);
+        const data = await response.json();
+        if (data[0]?.image1) {
+            profilePicSrc = `data:image/jpeg;base64,${data[0].image1}`; // Assuming base64 encoded image
+        }
+    } catch (error) {
+        console.error("Error fetching user profile picture:", error);
+    }
+
+    const profilePic = document.createElement("img");
+    profilePic.classList.add("message-pfp");
+    profilePic.src = profilePicSrc;
+    profilePic.alt = "Profile Picture";
+
+    // Structure: SVG | Content | Profile Picture (for user messages)
+    userMessageDiv.appendChild(replySvg);
+    userMessageDiv.appendChild(messageContent);
+    userMessageDiv.appendChild(profilePic);
+
+    messagesContainer.appendChild(userMessageDiv);
     scrollToBottom();
 
     formData.append("replyTo", replyToMessageId || "");
@@ -326,6 +350,8 @@ function sendMessage() {
     replyToMessageId = null;
     replyPreview.style.display = "none";
 }
+
+
 
 async function sendFriendRequest(friendId) {
     try {
@@ -390,7 +416,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
-socket.on("broadcast_message", (data) => {
+socket.on("broadcast_message", async (data) => {
     const USER = getCookie("username");
     const username = data.username || "Anonymous";
     const message = data.message || "";
@@ -399,27 +425,52 @@ socket.on("broadcast_message", (data) => {
     if (username !== USER) {
         const botMessageDiv = document.createElement("div");
         botMessageDiv.classList.add("message", "bot-message");
-        botMessageDiv.dataset.messageId = Date.now(); // Unique ID
+        botMessageDiv.dataset.messageId = Date.now();
+
+        const messageContent = document.createElement("div");
+        messageContent.classList.add("message-content");
 
         if (replyTo) {
-            botMessageDiv.innerHTML += `
+            const originalMessage = messagesContainer.querySelector(`[data-message-id="${replyTo}"] .message-content`)?.textContent || "Original message";
+            messageContent.innerHTML += `
                 <div class="replied-message" data-reply-to="${replyTo}">
-                    <span class="reply-label">Replying to</span> <div class="reply-username">${username}</div>
+                    Replying to ${username}: ${originalMessage}
                 </div>
             `;
         }
+        messageContent.innerHTML += formatMessage(message);
 
-        botMessageDiv.innerHTML += formatMessage(message);
-
-        // Add reply SVG button
         const replySvg = document.createElement("img");
         replySvg.classList.add("reply-btn");
-        replySvg.src = "/static/reply.svg"; // Ensure you have a reply.svg file
+        replySvg.src = "/static/reply.svg";
         replySvg.alt = "Reply";
         replySvg.addEventListener("click", () => handleReply(botMessageDiv.dataset.messageId, username, message));
+
+        // Fetch bot's profile picture (assuming sender ID is sent with message)
+        let profilePicSrc = "/static/default-avatar.png"; // Fallback image
+        if (data.userId) { // Assuming your socket message includes userId
+            try {
+                const response = await fetch(`/profile?id=${data.userId}`);
+                const profileData = await response.json();
+                if (profileData[0]?.image1) {
+                    profilePicSrc = `data:image/jpeg;base64,${profileData[0].image1}`;
+                }
+            } catch (error) {
+                console.error("Error fetching bot profile picture:", error);
+            }
+        }
+
+        const profilePic = document.createElement("img");
+        profilePic.classList.add("message-pfp");
+        profilePic.src = profilePicSrc;
+        profilePic.alt = "Profile Picture";
+
+        // Structure: Profile Picture | Content | SVG (for bot messages)
+        botMessageDiv.appendChild(profilePic);
+        botMessageDiv.appendChild(messageContent);
         botMessageDiv.appendChild(replySvg);
 
-        messagesContainer.appendChild(botMessageDiv); // Append to the end
+        messagesContainer.appendChild(botMessageDiv);
         scrollToBottom();
         renderLatex();
     }

@@ -1,0 +1,221 @@
+*{
+    margin: 0;
+    padding: 0;
+}
+
+body{
+    background-image: url('actual_login.jpg');
+    background-repeat: no-repeat;
+    background-repeat: repeat-y;
+    background-size: 100%;
+    background-position: center center;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    /* background: none; */
+    
+}
+
+.main{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100dvh;
+}
+
+.box{
+    display: flex;
+    justify-content: space-between;
+    background-color: #313338;
+    color: #b0b6bd;
+    font-family: "Noto Sans", sans-serif;
+    font-size: medium;
+    font-weight: 500;
+    width: 600px;
+    height: auto;
+    z-index: 2;
+    box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.651);
+}
+
+form{
+    padding-left: 20px;
+    padding-top: 20px;
+    
+}
+
+form p:nth-of-type(1){
+    padding-left: 80px;
+}
+
+
+form p:nth-of-type(2) {
+    padding-bottom: 20px;
+    padding-left: 50px;
+}
+
+
+p{
+    color: white;
+    font-size: x-large;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+.sec{
+    color: white;
+    font-size: medium;
+    font-weight: 300;
+}
+input{
+    background-color: #1e1f22;
+    height: 30px;
+    width: 280px;
+    border: none;
+    border-radius: 3px;
+    color: whitesmoke;
+    padding: 0px 10px;
+    font-size: medium;
+}
+
+#togglePassword {
+    cursor: pointer;
+    color: white; /* Change eye color */
+    font-size: 18px;
+}
+
+.password-container {
+    position: relative;
+    display: inline-block;
+}
+
+.password-container input {
+    padding-right: 40px; 
+    width: 280px;
+    height: 30px;
+    background-color: #1e1f22;
+    border: none;
+    border-radius: 3px;
+    color: whitesmoke;
+    padding: 0px 10px;
+    font-size: medium;
+}
+
+.password-container .material-symbols-outlined {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: white;
+    font-size: 22px;
+    transition: color 0.3s;
+}
+
+/* Change icon color when toggled */
+.password-container .active {
+    color: gray;
+}
+
+
+button{
+    width: 300px;
+    height: 30px;
+    background-color: #5865f2;
+    color: #dbdefc;
+    border: none;
+    border-radius: 3px;
+    margin-bottom: 20px;
+    font-size: large;
+    cursor: pointer;
+}
+
+.left{
+    display: flex;
+    flex-direction: column;
+    justify-content:center;
+    align-items: center;
+    padding-right: 20px;
+}
+
+img{
+    width: 150px;
+    border-radius: 3px;
+    height: auto;
+    padding-bottom: 5px;
+}
+
+
+
+
+
+/* Reduce opacity when error message appears */
+.main {
+    transition: opacity 0.3s ease-in-out;
+    z-index: 1;  
+
+}
+
+
+body::before {
+    content: "";
+    position:fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('actual_login.jpg'); /* Your background image */
+    background-repeat: no-repeat;
+    /* background-size: cover; */
+    background-size: 250%;
+    background-position: center center;
+    filter: blur(3px); /* Apply blur */
+    background-color: rgb(0, 0, 0); /* Add a semi-transparent black overlay */
+    z-index: -1; /* Push it behind content */
+}
+
+
+
+@media (max-width: 1340px) {
+    body{
+        background-size: 120%;
+        background-position: center center;
+    }
+}
+
+
+@media (max-width: 1100px) {
+    body{
+        background-size: 250%;
+        background-position: center center;
+    }
+}
+
+@media (max-width: 860px) {
+    body{
+        background-size: 350%;
+        background-position: center center;
+    }
+}
+
+
+@media (max-width: 595px) {
+    body{
+        background-size: 550%;
+        background-position: center center;
+        background-repeat: repeat-y;
+    }
+
+    .box{
+        width: 350px;
+        /* justify-content: center; */
+    }
+
+    .form{
+        padding-left: 0px;
+    }
+
+    .left{
+        display: none;
+    }
+}

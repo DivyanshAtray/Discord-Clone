@@ -481,16 +481,12 @@ textarea{
 .reply-btn {
     opacity: 0;
     visibility: hidden;
-    position: absolute;
-    left: -30px;
-    top: 50%;
-    transform: translateY(-50%);
     cursor: pointer;
     width: 20px;
     height: 20px;
+    margin: 0 5px; /* Space between SVG and content */
     transition: opacity 0.3s ease, visibility 0.3s ease;
 }
-
 /* Show reply button on hover with no delay */
 .message:hover .reply-btn {
     opacity: 1;
@@ -549,16 +545,6 @@ textarea{
     color: #fff;
 }
 
-/* Ensure textarea adjusts when reply preview is visible */
-/* textarea {
-    width: 100%;
-    resize: none;
-    background-color: #40444b;
-    border: none;
-    color: #fff;
-    padding: 10px;
-    border-radius: 5px;
-} */
 
 .inputbar {
     position: relative;
@@ -573,3 +559,71 @@ textarea{
 #replyMessageText{
     display: none;
 }
+
+
+
+
+.message {
+    display: flex;
+    align-items: center;
+    margin: 10px 30px;
+    padding: 10px;
+    max-width: 60%;
+    background-color: #292b30;
+    color: white;
+    border-radius: 10px;
+    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+    font-size: 14px;
+}
+
+.user-message {
+    flex-direction: row;
+    justify-content: flex-end;
+    align-self: flex-end;
+    background-color: #3a3a3a;
+}
+
+.bot-message {
+    flex-direction: row;
+    justify-content: flex-start;
+    align-self: flex-start;
+    background-color: #f1f1f19c;
+    color: black;
+}
+
+.message-pfp {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    margin: 0 5px; /* Space between picture and content */
+}
+
+.message-content {
+    max-width: 70%; /* Adjust as needed */
+    word-wrap: break-word;
+}
+
+.reply-btn {
+    opacity: 0;
+    visibility: hidden;
+    cursor: pointer;
+    width: 20px;
+    height: 20px;
+    margin: 0 5px;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.user-message .reply-btn {
+    order: -1; /* SVG stays on the left */
+}
+
+.bot-message .reply-btn {
+    order: 1; /* SVG stays on the right */
+}
+
+.message:hover .reply-btn {
+    opacity: 1;
+    visibility: visible;
+    transition-delay: 0s;
+}
+
