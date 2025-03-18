@@ -31,19 +31,10 @@ body{
     font-size: medium;
     font-weight: 500;
     width: 600px;
-    height: 450px;
+    height: auto;
 }
 
 form{
-    /* background-color: #313338;
-    color: #b0b6bd;
-    font-family: "Noto Sans", sans-serif;
-    font-size: medium;
-    font-weight: 500;
-    width: 600px;
-    height: 300px; */
-    /* display: flex;
-    flex-direction: column; */
     padding-left: 20px;
     padding-top: 20px;
     
@@ -138,7 +129,7 @@ button{
     color: #dbdefc;
     border: none;
     border-radius: 3px;
-    margin-top: 20px;
+    margin-bottom: 20px;
     font-size: large;
     cursor: pointer;
 }
@@ -158,8 +149,46 @@ img{
     padding-bottom: 5px;
 }
 
+/* Flash Messages */
+.flash-message {
+    padding: 15px;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: opacity 0.3s ease-in-out;
+}
 
+/* Error Messages (Centered) */
+.flash-message.error {
+    background-color: #211e22;
+    color: aliceblue;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: large;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 50%;
+    max-width: 400px;
+    text-align: center;
+    z-index: 1000;
+}
 
+/* Success Messages (Notification Style) */
+.flash-message.success {
+    display: none;
+    
+}
+
+/* Reduce opacity when error message appears */
+.main {
+    transition: opacity 0.3s ease-in-out;
+}
 
 
 
@@ -208,3 +237,60 @@ img{
 }
 
 
+
+
+
+
+
+
+
+
+
+.preview-container { 
+     }
+    .filename-link { color: #007bff; cursor: pointer; text-decoration: underline; font-size: small; }
+    .filename-link:hover { color: #0056b3; }
+    .material-symbols-outlined { cursor: pointer; }
+  
+
+    /* Full-screen crop modal */
+    .crop-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+    .crop-container {
+      max-width: 90%;
+      max-height: 90vh;
+      width: 80%;
+      height: auto;
+    }
+    .crop-container img {
+      max-width: 100%;
+      max-height: 90vh;
+      width: auto;
+      height: auto;
+    }
+    .crop-modal button {
+      position: absolute;
+      /* bottom: 20px; */
+      left: 50%;
+      transform: translateX(-50%);
+      /* padding: 12px 24px; */
+      background: #2c90f5;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    /* .crop-modal button:hover { background: #218838; } */
+    .crop-modal button:hover { background: #2483ff; 
+        transition: ease-in 1s;
+    }

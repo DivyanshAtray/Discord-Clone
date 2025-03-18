@@ -6,6 +6,7 @@ import string,sqlite3
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key"
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB limit
 socketio = SocketIO(app)
 
 
@@ -404,6 +405,14 @@ def send_message():
     conn.commit()
     conn.close()
     return jsonify({"status": "success"})
+
+
+
+
+
+# Register the GIF cropping blueprint
+from gif_crop import gif_crop_bp
+app.register_blueprint(gif_crop_bp)
 
 
 if __name__ == '__main__':
