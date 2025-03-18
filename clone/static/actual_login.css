@@ -18,6 +18,14 @@ body{
     
 }
 
+a{
+    font-size: medium;
+    all: unset;
+    color: #5f6cff;
+    cursor: pointer;
+    /* margin-bottom: 40px; */
+}
+
 .main{
     display: flex;
     align-items: center;

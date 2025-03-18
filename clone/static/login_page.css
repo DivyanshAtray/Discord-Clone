@@ -15,6 +15,15 @@ body{
     justify-content: center;
 }
 
+
+a{
+    font-size: medium;
+    all: unset;
+    color: #5f6cff;
+    cursor: pointer;
+}
+
+
 .main{
     display: flex;
     align-items: center;
