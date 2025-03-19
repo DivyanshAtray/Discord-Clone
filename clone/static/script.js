@@ -96,9 +96,16 @@ const socket = io.connect();
 let selectedFile = null;
 
 
-socket.on('connect', function () { console.log("connected") });
-socket.on('disconnect', function () { console.log("disconnected") });
-
+// Enhanced WebSocket debugging
+socket.on("connect", () => {
+    console.log("WebSocket connected successfully");
+});
+socket.on("disconnect", () => {
+    console.log("WebSocket disconnected");
+});
+socket.on("connect_error", (error) => {
+    console.error("WebSocket connection error:", error);
+});
 
 
 
@@ -111,7 +118,7 @@ function formatMessage(text) {
         .replace(/```([\s\S]+?)```/g, (match, code) => `
     <div class="code-block" style="position: relative; display: inline-block;">
         <pre><code>${escapeHtml(code)}</code></pre>
-        <button class="copy-btn" onclick="copyToClipboard(this)" 
+        <button class="copy-btn" onclick="copyToClipboard(this)"
             style="position: absolute; right: 5px; top: 5px; cursor: pointer;">📋</button>
     </div>
 `);
@@ -178,42 +185,6 @@ function downloadFile(url, filename) {
 }
 
 
-socket.on("broadcast_message", (data) => {
-    const USER = getCookie("username");
-    const username = data.username || "Anonymous";
-    const message = data.message || "";
-    const replyTo = data.replyTo;
-
-    if (username !== USER) {
-        const botMessageDiv = document.createElement("div");
-        botMessageDiv.classList.add("message", "bot-message");
-        botMessageDiv.dataset.messageId = Date.now(); // Unique ID
-
-        // Add replied message if it exists
-        if (replyTo) {
-            const originalMessage = messagesContainer.querySelector(`[data-message-id="${replyTo}"] .message-content`)?.textContent || "Original message";
-            botMessageDiv.innerHTML += `
-                <div class="replied-message" data-reply-to="${replyTo}">
-                    Replying to ${username}: ${originalMessage}
-                </div>
-            `;
-        }
-
-        botMessageDiv.innerHTML += formatMessage(message);
-
-        // Add reply SVG button
-        const replySvg = document.createElement("img");
-        replySvg.classList.add("reply-btn");
-        replySvg.src = "/static/reply.svg"; // Ensure you have a reply.svg file
-        replySvg.alt = "Reply";
-        replySvg.addEventListener("click", () => handleReply(botMessageDiv.dataset.messageId, username, message));
-        botMessageDiv.appendChild(replySvg);
-
-        messagesContainer.appendChild(botMessageDiv);
-        scrollToBottom();
-        renderLatex();
-    }
-});
 
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -264,92 +235,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 
-async function sendMessage() {
-    const messageText = inputField.value.trim();
-    if (messageText === "" && !selectedFile) return;
 
-    const userMessageDiv = document.createElement("div");
-    userMessageDiv.classList.add("message", "user-message");
-    userMessageDiv.dataset.messageId = Date.now();
-
-    const messageContent = document.createElement("div");
-    messageContent.classList.add("message-content");
-
-    const formData = new FormData();
-    if (selectedFile) {
-        formData.append("file", selectedFile);
-        const fileURL = URL.createObjectURL(selectedFile);
-        messageContent.innerHTML = `<a href="${fileURL}" target="_blank">${selectedFile.name}</a>`;
-        selectedFile = null;
-    }
-
-    if (messageText !== "") {
-        formData.append("message", messageText);
-        let formattedMessage = formatMessage(messageText);
-
-        if (replyToMessageId) {
-            messageContent.innerHTML += `
-                <div class="replied-message" data-reply-to="${replyToMessageId}">
-                    <span class="reply-label">Replying to</span> <div class="reply-username">${getCookie("username")}</div>
-                </div>
-            `;
-        }
-        messageContent.innerHTML += formattedMessage;
-    }
-
-    // Add reply SVG
-    const replySvg = document.createElement("img");
-    replySvg.classList.add("reply-btn");
-    replySvg.src = "/static/reply.svg";
-    replySvg.alt = "Reply";
-    replySvg.addEventListener("click", () => {
-        const originalMessage = messageContent.textContent || messageText;
-        handleReply(userMessageDiv.dataset.messageId, getCookie("username"), originalMessage);
-    });
-
-    // Fetch user's profile picture
-    const userId = getCookie("id");
-    let profilePicSrc = "/static/default-avatar.png"; // Fallback image
-    try {
-        const response = await fetch(`/profile?id=${userId}`);
-        const data = await response.json();
-        if (data[0]?.image1) {
-            profilePicSrc = `data:image/jpeg;base64,${data[0].image1}`; // Assuming base64 encoded image
-        }
-    } catch (error) {
-        console.error("Error fetching user profile picture:", error);
-    }
-
-    const profilePic = document.createElement("img");
-    profilePic.classList.add("message-pfp");
-    profilePic.src = profilePicSrc;
-    profilePic.alt = "Profile Picture";
-
-    // Structure: SVG | Content | Profile Picture (for user messages)
-    userMessageDiv.appendChild(replySvg);
-    userMessageDiv.appendChild(messageContent);
-    userMessageDiv.appendChild(profilePic);
-
-    messagesContainer.appendChild(userMessageDiv);
-    scrollToBottom();
-
-    formData.append("replyTo", replyToMessageId || "");
-    fetch("/send_message", {
-        method: "POST",
-        body: formData
-    }).then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                const USER = getCookie("username");
-                socket.emit("send_message", { message: messageText, username: USER, replyTo: replyToMessageId });
-            }
-        });
-
-    inputField.value = "";
-    autoResizeTextarea(inputField);
-    replyToMessageId = null;
-    replyPreview.style.display = "none";
-}
 
 
 
@@ -416,64 +302,181 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
+async function sendMessage() {
+    const messageText = inputField.value.trim();
+    if (messageText === "" && !selectedFile) return;
+
+    const USER = getCookie("username");
+    const userId = getCookie("id");
+
+    // Local rendering for your message
+    const messageDiv = document.createElement("div");
+    messageDiv.classList.add("message", "user-message");
+    messageDiv.dataset.messageId = Date.now();
+    const messageContent = document.createElement("div");
+    messageContent.classList.add("message-content");
+
+    if (replyToMessageId) {
+        const originalMessage = messagesContainer.querySelector(`[data-message-id="${replyToMessageId}"] .message-content`)?.textContent || "Original message";
+        messageContent.innerHTML += `
+            <div class="replied-message" data-reply-to="${replyToMessageId}">
+                Replying to ${USER}: ${originalMessage}
+            </div>
+        `;
+    }
+    if (selectedFile) {
+        const fileURL = URL.createObjectURL(selectedFile);
+        messageContent.innerHTML += `<a href="${fileURL}" target="_blank">${selectedFile.name}</a>`;
+    }
+    if (messageText !== "") {
+        messageContent.innerHTML += formatMessage(messageText);
+    }
+
+    const replySvg = document.createElement("img");
+    replySvg.classList.add("reply-btn");
+    replySvg.src = "/static/reply.svg";
+    replySvg.alt = "Reply";
+    replySvg.addEventListener("click", () => handleReply(messageDiv.dataset.messageId, USER, messageText || selectedFile?.name));
+
+    let profilePicSrc = "/static/default-avatar.png";
+    try {
+        const response = await fetch(`/profile?id=${userId}`);
+        const profileData = await response.json();
+        if (profileData[0]?.image1) {
+            profilePicSrc = `data:image/jpeg;base64,${profileData[0].image1}`;
+        }
+    } catch (error) {
+        console.error("Error fetching profile picture:", error);
+    }
+
+    const profilePic = document.createElement("img");
+    profilePic.classList.add("message-pfp");
+    profilePic.src = profilePicSrc;
+    profilePic.alt = "Profile Picture";
+
+    messageDiv.appendChild(replySvg);
+    messageDiv.appendChild(messageContent);
+    messageDiv.appendChild(profilePic);
+    messagesContainer.appendChild(messageDiv);
+    scrollToBottom();
+    renderLatex();
+
+    // Send to server
+    const formData = new FormData();
+    if (selectedFile) {
+        formData.append("file", selectedFile);
+        console.log("Sending file:", selectedFile.name);
+        selectedFile = null;
+    }
+    if (messageText !== "") {
+        formData.append("message", messageText);
+        console.log("Sending message:", messageText);
+    }
+    formData.append("replyTo", replyToMessageId || "");
+
+    try {
+        console.log("Sending POST to /send_message...");
+        const response = await fetch("/send_message", {
+            method: "POST",
+            body: formData,
+        });
+        const data = await response.json();
+
+        if (data.status === "success") {
+            console.log("POST successful, emitting socket message:", { message: messageText, username: USER, replyTo: replyToMessageId });
+            socket.emit("send_message", {
+                message: messageText,
+                username: USER,
+                replyTo: replyToMessageId,
+            });
+        } else {
+            console.error("Server rejected message:", data);
+        }
+    } catch (error) {
+        console.error("Error during sendMessage:", error);
+    }
+
+    inputField.value = "";
+    autoResizeTextarea(inputField);
+    replyToMessageId = null;
+    replyPreview.style.display = "none";
+}
+
+
 socket.on("broadcast_message", async (data) => {
+    console.log("Received broadcast_message:", data); // Debug log
+
     const USER = getCookie("username");
     const username = data.username || "Anonymous";
     const message = data.message || "";
+    const userId = data.userId;
     const replyTo = data.replyTo;
 
-    if (username !== USER) {
-        const botMessageDiv = document.createElement("div");
-        botMessageDiv.classList.add("message", "bot-message");
-        botMessageDiv.dataset.messageId = Date.now();
-
-        const messageContent = document.createElement("div");
-        messageContent.classList.add("message-content");
-
-        if (replyTo) {
-            const originalMessage = messagesContainer.querySelector(`[data-message-id="${replyTo}"] .message-content`)?.textContent || "Original message";
-            messageContent.innerHTML += `
-                <div class="replied-message" data-reply-to="${replyTo}">
-                    Replying to ${username}: ${originalMessage}
-                </div>
-            `;
-        }
-        messageContent.innerHTML += formatMessage(message);
-
-        const replySvg = document.createElement("img");
-        replySvg.classList.add("reply-btn");
-        replySvg.src = "/static/reply.svg";
-        replySvg.alt = "Reply";
-        replySvg.addEventListener("click", () => handleReply(botMessageDiv.dataset.messageId, username, message));
-
-        // Fetch bot's profile picture (assuming sender ID is sent with message)
-        let profilePicSrc = "/static/default-avatar.png"; // Fallback image
-        if (data.userId) { // Assuming your socket message includes userId
-            try {
-                const response = await fetch(`/profile?id=${data.userId}`);
-                const profileData = await response.json();
-                if (profileData[0]?.image1) {
-                    profilePicSrc = `data:image/jpeg;base64,${profileData[0].image1}`;
-                }
-            } catch (error) {
-                console.error("Error fetching bot profile picture:", error);
-            }
-        }
-
-        const profilePic = document.createElement("img");
-        profilePic.classList.add("message-pfp");
-        profilePic.src = profilePicSrc;
-        profilePic.alt = "Profile Picture";
-
-        // Structure: Profile Picture | Content | SVG (for bot messages)
-        botMessageDiv.appendChild(profilePic);
-        botMessageDiv.appendChild(messageContent);
-        botMessageDiv.appendChild(replySvg);
-
-        messagesContainer.appendChild(botMessageDiv);
-        scrollToBottom();
-        renderLatex();
+    // Skip if no valid data
+    if (!username || (!message && !data.file_location)) {
+        console.error("Invalid broadcast data:", data);
+        return;
     }
+
+    // Skip your own message (already rendered locally in sendMessage)
+    if (username === USER) {
+        console.log("Skipping own message (rendered locally)");
+        return;
+    }
+
+    console.log("Rendering friend’s message from:", username);
+
+    const messageDiv = document.createElement("div");
+    messageDiv.classList.add("message", "bot-message");
+    messageDiv.dataset.messageId = Date.now();
+    const messageContent = document.createElement("div");
+    messageContent.classList.add("message-content");
+
+    if (replyTo) {
+        const originalMessage = messagesContainer.querySelector(`[data-message-id="${replyTo}"] .message-content`)?.textContent || "Original message";
+        messageContent.innerHTML += `
+            <div class="replied-message" data-reply-to="${replyTo}">
+                Replying to ${username}: ${originalMessage}
+            </div>
+        `;
+    }
+    if (data.file_location) {
+        messageContent.innerHTML += `<a href="/uploads/${data.file_location}" target="_blank">${data.file_location}</a>`;
+    }
+    if (message) {
+        messageContent.innerHTML += formatMessage(message);
+    }
+
+    const replySvg = document.createElement("img");
+    replySvg.classList.add("reply-btn");
+    replySvg.src = "/static/reply.svg";
+    replySvg.alt = "Reply";
+    replySvg.addEventListener("click", () => handleReply(messageDiv.dataset.messageId, username, message || data.file_location));
+
+    let profilePicSrc = "/static/default-avatar.png";
+    if (userId) {
+        try {
+            const response = await fetch(`/profile?id=${userId}`);
+            const profileData = await response.json();
+            if (profileData[0]?.image1) {
+                profilePicSrc = `data:image/jpeg;base64,${profileData[0].image1}`;
+            }
+        } catch (error) {
+            console.error("Error fetching profile picture:", error);
+        }
+    }
+
+    const profilePic = document.createElement("img");
+    profilePic.classList.add("message-pfp");
+    profilePic.src = profilePicSrc;
+    profilePic.alt = "Profile Picture";
+
+    messageDiv.appendChild(profilePic);
+    messageDiv.appendChild(messageContent);
+    messageDiv.appendChild(replySvg);
+    messagesContainer.appendChild(messageDiv);
+    scrollToBottom();
+    renderLatex();
 });
 
 

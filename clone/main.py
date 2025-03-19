@@ -13,6 +13,8 @@ socketio = SocketIO(app)
 # File upload configurations
 dirname = os.path.dirname(__file__)
 db_path = os.path.join(dirname, "db.db")
+db_path = os.path.abspath(db_path)
+print(f"Flask db_path: {os.path.abspath(db_path)}")
 UPLOAD_FOLDER = os.path.join(dirname, "uploads")
 
 if not os.path.exists(UPLOAD_FOLDER):
@@ -230,24 +232,24 @@ def add_friend():
 
 
 
-@app.route('/profile',methods=['GET'])
+@app.route('/profile', methods=['GET'])
 def profile():
     id = request.args.get('id', type=int)
+    print(f"Profile ID: {id}")
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM users WHERE id = ?", (id,))
-    row=cursor.fetchone()
+    row = cursor.fetchone()
     if row:
-        encoded_image1 = base64.b64encode(row[3]).decode('utf-8')
-        encoded_image2 = base64.b64encode(row[4]).decode('utf-8')
-        formatted_messages = [
-            {
-                "username": row[1],
-                "image1": encoded_image1,
-                "image2": encoded_image2
-            }]
+        # Handle None values for images
+        encoded_image1 = base64.b64encode(row[3]).decode('utf-8') if row[3] else ""
+        encoded_image2 = base64.b64encode(row[4]).decode('utf-8') if row[4] else ""
+        formatted_messages = [{"username": row[1], "image1": encoded_image1, "image2": encoded_image2}]
+        conn.close()
         return jsonify(formatted_messages)
     else:
+        conn.close()
+        print(f"No user found for ID: {id}")
         return jsonify({"error": "ID doesn't exist or not found"}), 404
 
 
@@ -261,7 +263,7 @@ def logout():
 @app.route('/messages', methods=['GET'])
 def get_last_messages():
     try:
-        conn = sqlite3.connect("db.db")
+        conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         # Retrieve the value of 'x' from the 'settings' table
         cursor.execute("SELECT value FROM settings WHERE key = 'message_limit'")
@@ -303,7 +305,7 @@ def submit():
     image2_blob = request.files['image2'].read() if 'image2' in request.files else None
 
     # Check if user already exists
-    conn = sqlite3.connect("db.db")
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM users WHERE username = ? ", (username,))
     existing_user = cursor.fetchone()
@@ -351,36 +353,48 @@ def chatroom():
 
 @app.route('/get_username', methods=['GET'])
 def get_username():
-    username = session.get('username')  # Retrieve the username from the session
-    if username:
-        conn=sqlite3.connect(db_path)
-        cursor=conn.cursor()
-        cursor.execute("SELECT id FROM users WHERE username = ?",(username,))
-        id=cursor.fetchone()
-        data=jsonify({"username": username,"id":id[0]})
-        return data
-    else:
-        return jsonify({"error": "No username found"}), 401
+    print("Hit /get_username")
+    username = session.get('username')
+    print(f"Session username: {username}")
+    if not username:
+        return jsonify({"error": "No username in session"}), 401
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
+        row = cursor.fetchone()
+        print(f"Row for {username}: {row}")
+        if row:
+            user_id = row[0]
+            conn.close()
+            return jsonify({"username": username, "id": user_id})
+        else:
+            conn.close()
+            print(f"No user found for {username}")
+            return jsonify({"error": "User not found in database"}), 404
+    except Exception as e:
+        conn.close()
+        print(f"Error in get_username: {e}")
+        return jsonify({"error": f"Server error: {str(e)}"}), 500
 
 
 @socketio.on("send_message")
 def handle_send_message(data):
-    """
-    Handle incoming messages from users.
-    Data format (example):
-    {
-        "username": "user1",
-        "message": "Hello, everyone!"
-    }
-    """
     username = data["username"]
     if username is None:
         return
     message = data["message"]
     print(f"{username}: {message}")
 
-    # Broadcast the received message to all clients
-    emit("broadcast_message", {"username": username, "message": message}, broadcast=True)
+    # Add userId to the broadcast
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
+    user_id = cursor.fetchone()
+    conn.close()
+    user_id = user_id[0] if user_id else None
+
+    emit("broadcast_message", {"username": username, "message": message, "userId": user_id}, broadcast=True)
 
 
 @app.route('/send_message', methods=['POST'])
@@ -403,7 +417,7 @@ def send_message():
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], new_file_name))
 
     # Save the message and file_location in the database
-    conn = sqlite3.connect("db.db")
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     cursor.execute("INSERT INTO messages (username, message, file_location) VALUES (?, ?, ?)",
                    (username, message, new_file_name))
