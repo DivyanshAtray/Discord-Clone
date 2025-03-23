@@ -44,9 +44,8 @@
         <div class="chat">
 
             <div class="top">
-                <span class="name"><img class="pfp"
-                        src="data:image/jpeg;base64,{{ friend_pfp }}"
-                        alt="">{{ friend_name }}
+                <span class="name"><img class="pfp" src="{% if friend_pfp %}data:image/jpeg;base64,{{ friend_pfp }}{% else %}/static/default-avatar.png{% endif %}" alt="">
+    {{ friend_name }}
 
                 </span>
 

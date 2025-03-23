@@ -3,6 +3,7 @@ from flask_socketio import SocketIO, emit
 import os,base64
 import random
 import string,sqlite3
+import base64
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key"
@@ -27,30 +28,34 @@ def generate_random_string(length=10):
     chars = string.ascii_letters + string.digits  # Alphabets and numbers
     return ''.join(random.choices(chars, k=length))
 
+
+
 def get_user_friends(user_id):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     cursor.execute("SELECT friends FROM friends WHERE user_id = ?", (user_id,))
     friends = cursor.fetchone()
-    if friends:
-        friends=friends[0]
-    if friends:
-        friends = friends[0]
+    if friends and friends[0]:  # Check if friends exists and is not None
+        friends = friends[0]  # Get the comma-separated string (e.g., "1,2,3")
         friends = friends.split(',')
-        friends_data=[]
+        friends_data = []
         for friend in friends:
-            cursor.execute("SELECT username,image1,image2 FROM users WHERE id = ?", (friend,))
+            cursor.execute("SELECT username, image1, image2 FROM users WHERE id = ?", (friend,))
             row = cursor.fetchone()
-            print(row[0])
             if row:
-                friends_data.append({"username":row[0],
-                                     "id":friend,
-                                     "pfp": row[1],
-                                     "banner": row[2]
-                                     })
+                # Encode the BLOB data to base64
+                image1_base64 = base64.b64encode(row[1]).decode('utf-8') if row[1] else None
+                image2_base64 = base64.b64encode(row[2]).decode('utf-8') if row[2] else None
+                friends_data.append({
+                    "username": row[0],
+                    "id": friend,
+                    "pfp": image1_base64,  # Now a base64-encoded string
+                    "banner": image2_base64
+                })
         conn.close()
         return friends_data
     else:
+        conn.close()
         return "No friends"
 
 @socketio.on("connect")
