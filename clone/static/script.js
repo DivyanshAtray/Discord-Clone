@@ -343,10 +343,24 @@ async function sendMessage() {
     messageContent.classList.add("message-content");
 
     if (replyToMessageId) {
-        const originalMessage = messagesContainer.querySelector(`[data-message-id="${replyToMessageId}"] .message-content`)?.textContent || "Original message";
+        const originalMessageElement = messagesContainer.querySelector(`[data-message-id="${replyToMessageId}"] .message-content`);
+        let originalMessage = originalMessageElement?.textContent || "Original message";
+
+        // Remove the timestamp from the original message
+        const tempDiv = document.createElement("div");
+        tempDiv.innerHTML = originalMessageElement?.innerHTML || originalMessage;
+        const timestampDiv = tempDiv.querySelector(".message-timestamp");
+        if (timestampDiv) {
+            timestampDiv.remove();
+        }
+        originalMessage = tempDiv.textContent || tempDiv.innerText;
+
+        // Truncate the message to 10 characters and add "...." if longer
+        const truncatedMessage = originalMessage.length > 10 ? originalMessage.substring(0, 10) + "...." : originalMessage;
+
         messageContent.innerHTML += `
             <div class="replied-message" data-reply-to="${replyToMessageId}">
-                Replying to ${USER}: ${originalMessage}
+                Replying to ${USER}: ${truncatedMessage}
             </div>
         `;
     }
@@ -599,10 +613,24 @@ socket.on("broadcast_message", async (data) => {
     messageContent.classList.add("message-content");
 
     if (replyTo) {
-        const originalMessage = messagesContainer.querySelector(`[data-message-id="${replyTo}"] .message-content`)?.textContent || "Original message";
+        const originalMessageElement = messagesContainer.querySelector(`[data-message-id="${replyTo}"] .message-content`);
+        let originalMessage = originalMessageElement?.textContent || "Original message";
+
+        // Remove the timestamp from the original message
+        const tempDiv = document.createElement("div");
+        tempDiv.innerHTML = originalMessageElement?.innerHTML || originalMessage;
+        const timestampDiv = tempDiv.querySelector(".message-timestamp");
+        if (timestampDiv) {
+            timestampDiv.remove();
+        }
+        originalMessage = tempDiv.textContent || tempDiv.innerText;
+
+        // Truncate the message to 10 characters and add "...." if longer
+        const truncatedMessage = originalMessage.length > 10 ? originalMessage.substring(0, 10) + "...." : originalMessage;
+
         messageContent.innerHTML += `
             <div class="replied-message" data-reply-to="${replyTo}">
-                Replying to ${username}: ${originalMessage}
+                Replying to ${username}: ${truncatedMessage}
             </div>
         `;
     }
@@ -812,7 +840,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     let allMessagesLoaded = false;
 
     // Fetch and render messages for the current conversation
-    async function loadMessages(offset = 0, append = false) {
+   async function loadMessages(offset = 0, append = false) {
     if (isLoadingMessages || allMessagesLoaded) return;
     isLoadingMessages = true;
 
@@ -884,6 +912,30 @@ document.addEventListener("DOMContentLoaded", async function () {
             messageDiv.dataset.messageId = msg.id;
             const messageContent = document.createElement("div");
             messageContent.classList.add("message-content");
+
+            // Add reply preview if the message is a reply
+            if (msg.reply_to) {
+                const originalMessageElement = messagesContainer.querySelector(`[data-message-id="${msg.reply_to}"] .message-content`);
+                let originalMessage = originalMessageElement?.textContent || msg.message || "Original message";
+
+                // Remove the timestamp from the original message
+                const tempDiv = document.createElement("div");
+                tempDiv.innerHTML = originalMessageElement?.innerHTML || originalMessage;
+                const timestampDiv = tempDiv.querySelector(".message-timestamp");
+                if (timestampDiv) {
+                    timestampDiv.remove();
+                }
+                originalMessage = tempDiv.textContent || tempDiv.innerText;
+
+                // Truncate the message to 10 characters and add "...." if longer
+                const truncatedMessage = originalMessage.length > 10 ? originalMessage.substring(0, 10) + "...." : originalMessage;
+
+                messageContent.innerHTML += `
+                    <div class="replied-message" data-reply-to="${msg.reply_to}">
+                        Replying to ${msg.username}: ${truncatedMessage}
+                    </div>
+                `;
+            }
 
             if (msg.file_location) {
                 messageContent.innerHTML += `<a href="/uploads/${msg.file_location}" target="_blank">${msg.file_location}</a>`;
@@ -1099,12 +1151,25 @@ document.addEventListener("DOMContentLoaded", async function () {
         });
 });
 
-function handleReply(messageId, username, messageText) {
+function handleReply(messageId, username, message) {
     replyToMessageId = messageId;
-    replyToUsername.innerHTML = `<span class="reply-label">Replying to</span> <div class="reply-username">${username}</div>`;
-    replyMessageText.textContent = messageText.length > 50 ? messageText.substring(0, 50) + "..." : messageText;
     replyPreview.style.display = "block";
-    inputField.focus();
+
+    // Truncate the message to 10 characters and add "...." if longer
+    let truncatedMessage = message.length > 10 ? message.substring(0, 10) + "...." : message;
+
+    // Remove any timestamp from the message (in case it's included)
+    // Since the message content might include the timestamp div, we'll strip it
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = truncatedMessage;
+    const timestampDiv = tempDiv.querySelector(".message-timestamp");
+    if (timestampDiv) {
+        timestampDiv.remove();
+    }
+    truncatedMessage = tempDiv.textContent || tempDiv.innerText;
+
+    replyPreview.innerHTML = `Replying to ${username}: ${truncatedMessage}`;
+    replyPreview.dataset.messageId = messageId;
 }
 
 cancelReply.addEventListener("click", () => {

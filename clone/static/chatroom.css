@@ -584,17 +584,18 @@ textarea{
     flex-direction: row;
     justify-content: flex-end;
     align-self: flex-end;
-    background-color: #3a3a3a;
+    background-color: #1c1c1c;
     min-width:10%;
     max-width:60%;
+    color:white;
 }
 
 .bot-message {
     flex-direction: row;
     justify-content: flex-start;
     align-self: flex-start;
-    background-color: #f1f1f19c;
-    color: black;
+    background-color: #131418;
+    color: white;
     min-width:10%;
     max-width:60%;
 }
