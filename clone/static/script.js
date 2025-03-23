@@ -1415,13 +1415,19 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
     }
 
+    const rightbar = document.querySelector(".rightbar");
+    if (!rightbar) {
+        console.error("Rightbar element not found! Please ensure the element with class 'rightbar' exists in the DOM.");
+        return;
+    }
+
     const sidebarOverlay = document.createElement("div");
     sidebarOverlay.classList.add("sidebar-overlay");
     document.body.appendChild(sidebarOverlay);
 
     // Function to check if the screen width is less than 1320px
     function isMobileView() {
-        const isMobile = window.innerWidth < 1220;
+        const isMobile = window.innerWidth < 1320;
         console.log(`Is mobile view? ${isMobile} (Window width: ${window.innerWidth}px)`);
         return isMobile;
     }
@@ -1430,6 +1436,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function openSidebar() {
         console.log("Opening sidebar");
         sidebar.classList.add("open");
+        rightbar.classList.remove("open"); // Close rightbar if open
         sidebarOverlay.classList.add("active");
     }
 
@@ -1437,6 +1444,21 @@ document.addEventListener("DOMContentLoaded", () => {
     function closeSidebar() {
         console.log("Closing sidebar");
         sidebar.classList.remove("open");
+        sidebarOverlay.classList.remove("active");
+    }
+
+    // Function to open the rightbar
+    function openRightbar() {
+        console.log("Opening rightbar");
+        rightbar.classList.add("open");
+        sidebar.classList.remove("open"); // Close sidebar if open
+        sidebarOverlay.classList.add("active");
+    }
+
+    // Function to close the rightbar
+    function closeRightbar() {
+        console.log("Closing rightbar");
+        rightbar.classList.remove("open");
         sidebarOverlay.classList.remove("active");
     }
 
@@ -1464,28 +1486,50 @@ document.addEventListener("DOMContentLoaded", () => {
             const swipeDistance = touchEndX - touchStartX;
             console.log(`Native swipe distance: ${swipeDistance}`);
 
-            if (swipeDistance > swipeThreshold && !sidebar.classList.contains("open")) {
-                console.log("Native swipe left to right detected - opening sidebar");
-                openSidebar();
-            } else if (swipeDistance < -swipeThreshold && sidebar.classList.contains("open")) {
-                console.log("Native swipe right to left detected - closing sidebar");
-                closeSidebar();
+            // Swipe left to right: Open sidebar, close rightbar
+            if (swipeDistance > swipeThreshold) {
+                if (!sidebar.classList.contains("open") && !rightbar.classList.contains("open")) {
+                    console.log("Native swipe left to right detected - opening sidebar");
+                    openSidebar();
+                } else if (rightbar.classList.contains("open")) {
+                    console.log("Native swipe left to right detected - closing rightbar");
+                    closeRightbar();
+                }
+            }
+            // Swipe right to left: Open rightbar, close sidebar
+            else if (swipeDistance < -swipeThreshold) {
+                if (!rightbar.classList.contains("open") && !sidebar.classList.contains("open")) {
+                    console.log("Native swipe right to left detected - opening rightbar");
+                    openRightbar();
+                } else if (sidebar.classList.contains("open")) {
+                    console.log("Native swipe right to left detected - closing sidebar");
+                    closeSidebar();
+                }
             } else {
-                console.log("Native swipe distance too small or sidebar already in desired state");
+                console.log("Native swipe distance too small or no action needed");
             }
             e.stopPropagation();
         }, { passive: false });
 
-        // Close sidebar when clicking on the overlay
+        // Close sidebar or rightbar when clicking on the overlay
         sidebarOverlay.addEventListener("click", (e) => {
-            console.log("Overlay clicked - closing sidebar");
-            closeSidebar();
+            console.log("Overlay clicked - closing open bar");
+            if (sidebar.classList.contains("open")) {
+                closeSidebar();
+            } else if (rightbar.classList.contains("open")) {
+                closeRightbar();
+            }
             e.stopPropagation();
         });
 
-        // Prevent closing the sidebar when clicking inside it
+        // Prevent closing the sidebar or rightbar when clicking inside them
         sidebar.addEventListener("click", (e) => {
             console.log("Clicked inside sidebar - preventing close");
+            e.stopPropagation();
+        });
+
+        rightbar.addEventListener("click", (e) => {
+            console.log("Clicked inside rightbar - preventing close");
             e.stopPropagation();
         });
     }
@@ -1495,11 +1539,12 @@ document.addEventListener("DOMContentLoaded", () => {
         initializeSwipeDetection();
     }
 
-    // Update sidebar visibility on window resize
+    // Update sidebar and rightbar visibility on window resize
     window.addEventListener("resize", () => {
         if (!isMobileView()) {
-            console.log("Window resized to larger screen - resetting sidebar state");
+            console.log("Window resized to larger screen - resetting sidebar and rightbar state");
             sidebar.classList.remove("open");
+            rightbar.classList.remove("open");
             sidebarOverlay.classList.remove("active");
         } else {
             console.log("Window resized to mobile view - enabling swipe detection");

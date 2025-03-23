@@ -86,7 +86,7 @@
 
 .sidebar{
     height: 100dvh;
-    width: 20vw;
+    width: 25vw;
     background-color: #2b2d31;
     overflow: hidden;
     display: flex;
@@ -205,7 +205,7 @@ hr {
 .messages{
     margin-top: 20px;
     height: 80dvh;
-    width: 80vw;
+    width: 60vw;
     overflow: auto;
     display: flex;
     flex-direction: column;
@@ -267,7 +267,6 @@ textarea{
     font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
     font-size: large;
     min-width: 30px;
-    margin-right: 20px;
     max-width: 60%;
     background-color: #292b30; /* Discord-like color */
     color: white;
@@ -335,27 +334,6 @@ textarea{
 
 
 
-/*.user-message {
-    background-color: #3a3a3a;
-    color: white;
-    min-width:40%;
-    max-width:60%;
-    align-self: flex-end;
-    text-align: left;
-    float: right;
-    clear: both;
-}*/
-
-/*.bot-message {
-    background-color: #f1f1f19c;
-    color: black;
-    min-width:40%;
-    max-width:60%;
-    align-self: flex-start;
-    text-align: left;
-    float: left;
-    clear: both;
-}*/
 
 
 
@@ -570,7 +548,7 @@ textarea{
 .message {
     display: flex;
     align-items: center;
-    margin: 10px 30px;
+    margin: 10px 20px;
     padding: 10px;
     max-width: 60%;
     background-color: #292b30;
@@ -582,7 +560,7 @@ textarea{
 
 .user-message {
     flex-direction: row;
-    justify-content: flex-end;
+    justify-content: space-between;
     align-self: flex-end;
     background-color: #1c1c1c;
     min-width:10%;
@@ -592,7 +570,7 @@ textarea{
 
 .bot-message {
     flex-direction: row;
-    justify-content: flex-start;
+    justify-content: flex-end;
     align-self: flex-start;
     background-color: #131418;
     color: white;
@@ -608,8 +586,10 @@ textarea{
 }
 
 .message-content {
-    max-width: 70%; /* Adjust as needed */
+    max-width: 100%; /* Adjust as needed */
     word-wrap: break-word;
+    margin-right: 10px;
+    margin-left: 10px;
 }
 
 .reply-btn {
@@ -668,50 +648,92 @@ span.unread::after {
     vertical-align: middle !important;
 }
 
-/* Container to hold sidebar and chat */
+/* Container to hold sidebar, chat, and rightbar */
 .main {
     display: flex;
     flex-direction: row;
 }
 
-/* Base sidebar styles */
-.sidebar {
+
+.rightbar {
     height: 100dvh;
-    width: 20vw;
+    width: 35vw;
     background-color: #2b2d31;
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
 }
 
-/* On screens smaller than 1320px */
-@media (max-width: 1220px) {
+.rightbar hr{
+    width: 100%;
+}
+
+/* Split rightbar into two equal horizontal sections */
+.friend-info, .user-info {
+    margin-top: 20px;
+    width: 100%;
+    height: 50%;
+    padding: 10px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    text-align: center;
+    color: #fff;
+}
+
+
+.friend-pfp, .user-pfp {
+    width: 80px; 
+    height: 80px;
+    border-radius: 100%;
+    object-fit: cover; 
+
+}
+
+
+.friend-banner, .user-banner {
+    width: 100%; 
+    aspect-ratio: 16 / 9; 
+    object-fit: cover;
+    border-radius: 5px;
+    margin-top: 10px;
+}
+
+
+@media (max-width: 1320px) {
     .chat {
-        width: 100% !important; /* Full width of the device screen */
-        margin-left: 0 !important; /* Remove any left margin to ensure full width */
+        width: 100% !important;
+        margin-left: 0 !important; 
     }
 
     .sidebar {
-       width:900px;
-        margin-left: -900px !important; /* Move sidebar off-screen to the left */
+        width: 300px !important; /* Set sidebar width to 300px */
+        margin-left: -300px !important; /* Move sidebar off-screen to the left */
         transition: margin-left 0.3s ease-in-out !important; /* Smooth animation */
-        z-index:1000;
-
+        z-index: 100;
     }
 
     .sidebar.open {
         margin-left: 0 !important; /* Slide sidebar into view at the left edge */
-
+        z-index: 100;
     }
 
-    .message{
-    margin:0px;
-    padding:5px;
+    .rightbar {
+        width: 300px !important; /* Set rightbar width to 300px */
+        margin-right: -300px !important; /* Move rightbar off-screen to the right */
+        transition: margin-right 0.3s ease-in-out !important; /* Smooth animation */
+        z-index: 100;
+    }
+
+    .rightbar.open {
+        margin-right: 0 !important; /* Slide rightbar into view at the right edge */
+        z-index: 100;
     }
 }
 
-/* Overlay for the background when sidebar is open */
+/* Overlay for the background when sidebar or rightbar is open */
 .sidebar-overlay {
     position: fixed;
     top: 0;
@@ -723,11 +745,17 @@ span.unread::after {
     display: none; /* Hidden by default */
     opacity: 0;
     transition: opacity 0.3s ease-in-out; /* Fade animation */
+    z-index: 1;
 }
 
-/* Show overlay when sidebar is open */
+/* Show overlay when sidebar or rightbar is open */
 .sidebar-overlay.active {
     display: block;
     opacity: 1;
-    z-index:1;
+    z-index: 1;
+}
+
+/* Ensure touch events are not blocked */
+.main, .chat, .sidebar, .rightbar {
+    touch-action: auto !important;
 }

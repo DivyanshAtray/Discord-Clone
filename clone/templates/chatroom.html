@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-{% set friend_id = friend_id | string %}  {# Convert friend_id to a string #}
+{% set friend_id = friend_id | string %} {# Convert friend_id to a string #}
 {% set friend = friends_data | selectattr("id", "equalto", friend_id) | first %}
 {% set friend_name = friend.username if friend else "Unknown" %}
 {% set friend_pfp = friend.pfp if friend else "Unknown" %}
@@ -42,9 +42,11 @@
         </div>
 
         <div class="chat">
-   <div class="top">
-                <span class="name"><img class="pfp" src="{% if friend_pfp %}data:image/jpeg;base64,{{ friend_pfp }}{% else %}/static/default-avatar.png{% endif %}" alt="">
-    {{ friend_name }}
+            <div class="top">
+                <span class="name"><img class="pfp"
+                        src="{% if friend_pfp %}data:image/jpeg;base64,{{ friend_pfp }}{% else %}/static/default-avatar.png{% endif %}"
+                        alt="">
+                    {{ friend_name }}
 
                 </span>
 
@@ -81,26 +83,50 @@
 
             </div>
             <hr>
-    <div class="messages" >
-        <!-- Messages will be loaded here -->
-    </div>
-    <div class="inputbar">
-        <form id="message-form" action="/send_message" method="POST" enctype="multipart/form-data">
-            <input type="hidden" name="friend_id" value="{{ friend_id }}">
-            <div class="reply-preview" id="replyPreview" style="display: none;">
-                <span> <span id="replyToUsername"></span></span>
-                <p id="replyMessageText"></p>
-                <button id="cancelReply">✖</button>
+            <div class="messages">
+                <!-- Messages will be loaded here -->
             </div>
-            <textarea name="message" id="messageInput" placeholder="Message..." required></textarea>
-            <input type="file" name="file" id="fileInput" style="display: none;">
-            <img class="send" src="/static/send.svg" alt="send">
-            <img class="attachment" src="/static/attachment.svg" alt="attachment">
-        </form>
+            <div class="inputbar">
+                <form id="message-form" action="/send_message" method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="friend_id" value="{{ friend_id }}">
+                    <div class="reply-preview" id="replyPreview" style="display: none;">
+                        <span> <span id="replyToUsername"></span></span>
+                        <p id="replyMessageText"></p>
+                        <button id="cancelReply">✖</button>
+                    </div>
+                    <textarea name="message" id="messageInput" placeholder="Message..." required></textarea>
+                    <input type="file" name="file" id="fileInput" style="display: none;">
+                    <img class="send" src="/static/send.svg" alt="send">
+                    <img class="attachment" src="/static/attachment.svg" alt="attachment">
+                </form>
+            </div>
+        </div>
+        <div class="rightbar">
+            <div class="friend-info">
+                
+                <img class="friend-pfp"
+                    src="{% if friend_pfp %}data:image/jpeg;base64,{{ friend_pfp }}{% else %}/static/default-avatar.png{% endif %}"
+                    alt="Friend's PFP">
+                <img class="friend-banner"
+                    src="{% if friend_banner %}data:image/jpeg;base64,{{ friend_banner }}{% else %}/static/default-banner.png{% endif %}"
+                    alt="Friend's Banner">
+                <p>{{ friend_name }}</p>
+                <p>#{{ friend_id }}</p>
+            </div><hr>
+            <div class="user-info">
+    
+                <img class="user-pfp"
+                    src="{% if user_pfp %}data:image/jpeg;base64,{{ user_pfp }}{% else %}/static/default-avatar.png{% endif %}"
+                    alt="User's PFP">
+                <img class="user-banner"
+                    src="{% if user_banner %}data:image/jpeg;base64,{{ user_banner }}{% else %}/static/default-banner.png{% endif %}"
+                    alt="User's Banner">
+                <p>{{ user_name }}</p>
+                <p>#{{ user_id }}</p>
+            </div>
+        </div>
     </div>
-</div>
-    </div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
 </body>
 
 </html>

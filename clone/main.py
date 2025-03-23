@@ -564,19 +564,47 @@ def chatroom():
     if 'username' not in session:
         flash("Please log in to access the chatroom.","error")
         return redirect('/login')
+    
+    # Fetch user's data
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
-    cursor.execute("SELECT image1,image2 FROM users WHERE id = ?", (session['id'],))
+    cursor.execute("SELECT image1, image2 FROM users WHERE id = ?", (session['id'],))
     row = cursor.fetchone()
-    user_data ={
-        "username":session['username'],
-        "id":session['id'],
-        "pfp":row[0],
-        "banner":row[1]
-    }
+    
+    # Encode the user's PFP and banner to base64
+    user_pfp = base64.b64encode(row[0]).decode('utf-8') if row[0] else None
+    user_banner = base64.b64encode(row[1]).decode('utf-8') if row[1] else None
+    
+    # Fetch friend's data if friend_id is provided
+    friend_pfp = None
+    friend_banner = None
+    friend_name = None
+    friend_id = friend_id if friend_id else None
+    if friend_id:
+        cursor.execute("SELECT username, image1, image2 FROM users WHERE id = ?", (friend_id,))
+        friend_row = cursor.fetchone()
+        if friend_row:
+            friend_name = friend_row[0]
+            friend_pfp = base64.b64encode(friend_row[1]).decode('utf-8') if friend_row[1] else None
+            friend_banner = base64.b64encode(friend_row[2]).decode('utf-8') if friend_row[2] else None
+    
+    conn.close()
+    
+    # Fetch friends data
     friends_data = get_user_friends(session["id"])
-    print(friends_data)
-    return render_template('chatroom.html', user_data=user_data, friends_data=friends_data,friend_id=friend_id)
+    print(f"Friends data: {friends_data}")
+    
+    # Pass variables directly to the template
+    return render_template('chatroom.html',
+                           user_pfp=user_pfp,
+                           user_banner=user_banner,
+                           user_name=session['username'],
+                           user_id=session['id'],
+                           friend_pfp=friend_pfp,
+                           friend_banner=friend_banner,
+                           friend_name=friend_name,
+                           friend_id=friend_id,
+                           friends_data=friends_data)
 
 
 
