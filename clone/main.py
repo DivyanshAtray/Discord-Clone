@@ -107,7 +107,7 @@ def handle_send_message(data):
         return
 
     # Log the message for debugging
-    print(f"{username} (ID: {user_id}) to Friend ID {friend_id}: {message}")
+    print(f"Received send_message: {username} (ID: {user_id}) to Friend ID {friend_id}: {message}")
 
     # Prepare the message data to broadcast
     message_data = {
@@ -121,10 +121,17 @@ def handle_send_message(data):
         "message_id": message_id
     }
 
-    # Send to sender
-    emit("broadcast_message", message_data, room=str(user_id))
-    # Send to recipient
-    emit("broadcast_message", message_data, room=str(friend_id))
+    # Send to sender (seen = 1)
+    message_data_sender = message_data.copy()
+    message_data_sender["seen"] = 1
+    print(f"Emitting broadcast_message to sender room {user_id}")
+    emit("broadcast_message", message_data_sender, room=str(user_id))
+
+    # Send to recipient (seen = 0)
+    message_data_recipient = message_data.copy()
+    message_data_recipient["seen"] = 0
+    print(f"Emitting broadcast_message to recipient room {friend_id}")
+    emit("broadcast_message", message_data_recipient, room=str(friend_id))
 
 @app.route('/get-friend-data', methods=['GET'])
 def get_user_data():
@@ -431,7 +438,6 @@ def get_messages():
     for message in messages:
         # Ensure the timestamp is in ISO 8601 format with UTC indicator
         timestamp = message[7]  # e.g., "2025-03-23 10:23:00"
-        # SQLite stores timestamps in UTC, so append 'Z' to indicate UTC
         if timestamp:
             timestamp = f"{timestamp}Z"  # Add 'Z' to indicate UTC
         messages_data.append({
@@ -442,7 +448,8 @@ def get_messages():
             'message': message[4],
             'file_location': message[5],
             'reply_to': message[6],
-            'timestamp': timestamp  # Standardized UTC timestamp
+            'timestamp': timestamp,
+            'seen': message[8]  # Include the seen status
         })
 
     conn.close()
@@ -605,9 +612,170 @@ def get_username():
 
 @app.route('/send_message', methods=['POST'])
 def send_message():
+    print("Received /send_message request")
     # Delete old messages before processing new ones
     delete_old_messages()
 
+    if 'username' not in session:
+        print("User not logged in")
+        return jsonify({"status": "error", "error": "User not logged in"}), 401
+
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    # Get the current user's ID
+    cursor.execute('SELECT id FROM users WHERE username = ?', (session['username'],))
+    user_id = cursor.fetchone()
+    if not user_id:
+        print(f"User not found for username: {session['username']}")
+        conn.close()
+        return jsonify({"status": "error", "error": "User not found"}), 404
+    user_id = user_id[0]
+    print(f"Current user ID: {user_id}")
+
+    # Get form data
+    message = request.form.get('message')
+    friend_id = request.form.get('friend_id', type=int)
+    reply_to = request.form.get('replyTo', type=int)
+    file = request.files.get('file')
+
+    if not friend_id:
+        print("Friend ID is required")
+        conn.close()
+        return jsonify({"status": "error", "error": "Friend ID is required"}), 400
+
+    file_location = None
+    if file:
+        filename = secure_filename(file.filename)
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
+        file_location = filename
+
+    try:
+        # Insert the message into the database with seen = 0 (unseen)
+        cursor.execute('''
+            INSERT INTO messages (username, user_id, friend_id, message, file_location, reply_to, seen)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (session['username'], user_id, friend_id, message, file_location, reply_to if reply_to else None, 0))
+        conn.commit()
+
+        # Get the ID and timestamp of the newly inserted message
+        cursor.execute('SELECT id, timestamp FROM messages WHERE id = last_insert_rowid()')
+        result = cursor.fetchone()
+        message_id = result[0]
+        timestamp = result[1]
+        # Ensure the timestamp is in ISO 8601 format with UTC indicator
+        if timestamp:
+            timestamp = f"{timestamp}Z"  # Add 'Z' to indicate UTC
+    except Exception as e:
+        print(f"Error saving message: {str(e)}")
+        conn.close()
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+    conn.close()
+
+    # Emit the send_message event via SocketIO to trigger handle_send_message
+    print(f"Emitting send_message event: userId={user_id}, friendId={friend_id}, message_id={message_id}")
+    socketio.emit('send_message', {
+        'message': message,
+        'username': session['username'],
+        'userId': user_id,
+        'friendId': friend_id,
+        'replyTo': reply_to if reply_to else None,
+        'timestamp': timestamp,
+        'file_location': file_location,
+        'message_id': message_id
+    })
+
+    return jsonify({"status": "success", "message_id": message_id, "timestamp": timestamp})
+
+@app.route('/mark_messages_seen', methods=['POST'])
+def mark_messages_seen():
+    if 'username' not in session:
+        print("Session error: 'username' not in session")
+        return jsonify({"status": "error", "error": "User not logged in"}), 401
+
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    # Get the current user's ID
+    cursor.execute('SELECT id FROM users WHERE username = ?', (session['username'],))
+    user_id = cursor.fetchone()
+    if not user_id:
+        print(f"User not found for username: {session['username']}")
+        conn.close()
+        return jsonify({"status": "error", "error": "User not found"}), 404
+    user_id = user_id[0]
+    print(f"Current user ID: {user_id}")
+
+    # Get the message IDs to mark as seen
+    message_ids = request.json.get('message_ids', [])
+    # Get friend_id and convert to int (handle if it's a string)
+    friend_id = request.json.get('friend_id')
+    print(f"Received message_ids: {message_ids}, friend_id: {friend_id}")
+
+    # Validate friend_id and convert to int
+    try:
+        friend_id = int(friend_id) if friend_id is not None else None
+    except (ValueError, TypeError):
+        print("Invalid friend_id: must be an integer")
+        conn.close()
+        return jsonify({"status": "error", "error": "Friend ID must be an integer"}), 400
+
+    if not message_ids or not friend_id:
+        print("Missing message_ids or friend_id")
+        conn.close()
+        return jsonify({"status": "error", "error": "Message IDs and friend ID are required"}), 400
+
+    try:
+        # Log the messages before updating
+        cursor.execute('SELECT id, user_id, friend_id, seen FROM messages WHERE id IN ({})'.format(','.join('?' * len(message_ids))), message_ids)
+        messages = cursor.fetchall()
+        print(f"Messages before update: {messages}")
+
+        # Mark the specified messages as seen (only if they are from the friend to the user)
+        cursor.execute('''
+            UPDATE messages 
+            SET seen = 1 
+            WHERE id IN ({}) 
+            AND user_id = ? 
+            AND friend_id = ?
+        '''.format(','.join('?' * len(message_ids))), (*message_ids, friend_id, user_id))
+        updated_rows = cursor.rowcount
+        print(f"Updated {updated_rows} rows (friend to user)")
+
+        # If no rows were updated, try the reverse direction (just in case)
+        if updated_rows == 0:
+            cursor.execute('''
+                UPDATE messages 
+                SET seen = 1 
+                WHERE id IN ({}) 
+                AND user_id = ? 
+                AND friend_id = ?
+            '''.format(','.join('?' * len(message_ids))), (*message_ids, user_id, friend_id))
+            updated_rows = cursor.rowcount
+            print(f"Updated {updated_rows} rows (user to friend - fallback)")
+
+        conn.commit()
+
+        # Log the messages after updating
+        cursor.execute('SELECT id, user_id, friend_id, seen FROM messages WHERE id IN ({})'.format(','.join('?' * len(message_ids))), message_ids)
+        messages_after = cursor.fetchall()
+        print(f"Messages after update: {messages_after}")
+
+        if updated_rows == 0:
+            print("No rows updated - check if user_id and friend_id match the message")
+    except Exception as e:
+        print(f"Error updating messages: {str(e)}")
+        conn.close()
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+    conn.close()
+    return jsonify({"status": "success"})
+
+
+@app.route('/get_unread_counts', methods=['GET'])
+def get_unread_counts():
     if 'username' not in session:
         return jsonify({"status": "error", "error": "User not logged in"}), 401
 
@@ -622,47 +790,30 @@ def send_message():
         return jsonify({"status": "error", "error": "User not found"}), 404
     user_id = user_id[0]
 
-    # Get form data
-    message = request.form.get('message')
-    friend_id = request.form.get('friend_id', type=int)
-    reply_to = request.form.get('replyTo', type=int)
-    file = request.files.get('file')
-
-    if not friend_id:
+    # Get the user's friends
+    cursor.execute('SELECT friends FROM friends WHERE user_id = ?', (user_id,))
+    friends = cursor.fetchone()
+    if not friends or not friends[0]:
         conn.close()
-        return jsonify({"status": "error", "error": "Friend ID is required"}), 400
+        return jsonify({"unread_counts": {}}), 200
 
-    file_location = None
-    if file:
-        filename = secure_filename(file.filename)
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(file_path)
-        file_location = filename
+    friends_list = friends[0].split(',')
+    unread_counts = {}
 
-    try:
-        # Insert the message into the database
+    # For each friend, count the number of unread messages (seen = 0)
+    for friend_id in friends_list:
+        if not friend_id:
+            continue
         cursor.execute('''
-            INSERT INTO messages (username, user_id, friend_id, message, file_location, reply_to)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (session['username'], user_id, friend_id, message, file_location, reply_to if reply_to else None))
-        conn.commit()
-
-        # Get the ID and timestamp of the newly inserted message
-        cursor.execute('SELECT id, timestamp FROM messages WHERE id = last_insert_rowid()')
-        result = cursor.fetchone()
-        message_id = result[0]
-        timestamp = result[1]
-        # Ensure the timestamp is in ISO 8601 format with UTC indicator
-        if timestamp:
-            timestamp = f"{timestamp}Z"  # Add 'Z' to indicate UTC
-    except Exception as e:
-        conn.close()
-        return jsonify({"status": "error", "error": str(e)}), 500
+            SELECT COUNT(*) 
+            FROM messages 
+            WHERE user_id = ? AND friend_id = ? AND seen = 0
+        ''', (friend_id, user_id))
+        count = cursor.fetchone()[0]
+        unread_counts[friend_id] = count
 
     conn.close()
-    return jsonify({"status": "success", "message_id": message_id, "timestamp": timestamp})
-
-
+    return jsonify({"unread_counts": unread_counts})
 
 
 # Register the GIF cropping blueprint

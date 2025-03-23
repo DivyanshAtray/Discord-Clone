@@ -109,19 +109,14 @@ const messagesContainer = document.querySelector(".messages");
 const fileInput = document.getElementById("fileInput");
 const attachmentButton = document.querySelector(".attachment");
 
-
-
 const replyPreview = document.getElementById("replyPreview");
 const replyToUsername = document.getElementById("replyToUsername");
 const replyMessageText = document.getElementById("replyMessageText");
 const cancelReply = document.getElementById("cancelReply");
 let replyToMessageId = null; // To track the message being replied to
 
-
-
 const socket = io.connect();
 let selectedFile = null;
-
 
 // Enhanced WebSocket debugging
 socket.on("connect", () => {
@@ -133,8 +128,6 @@ socket.on("disconnect", () => {
 socket.on("connect_error", (error) => {
     console.error("WebSocket connection error:", error);
 });
-
-
 
 // Function to format messages (Bold, Italics, Code Blocks)
 function formatMessage(text) {
@@ -166,9 +159,8 @@ function copyToClipboard(button) {
 
 // Escape HTML to prevent injection
 function escapeHtml(text) {
-    return text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    return text.replace(/</g, "<").replace(/>/g, ">");
 }
-
 
 function renderLatex() {
     if (window.MathJax) MathJax.typesetPromise();
@@ -210,9 +202,6 @@ function downloadFile(url, filename) {
     a.click();
     document.body.removeChild(a);
 }
-
-
-
 
 document.addEventListener("DOMContentLoaded", function () {
     var openPopup = document.getElementById('openPopup');
@@ -260,12 +249,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
 
-
-
-
-
-
-
 async function sendFriendRequest(friendId) {
     try {
         // Ensure the friendId is provided
@@ -298,9 +281,6 @@ async function sendFriendRequest(friendId) {
     }
 }
 
-
-
-
 document.addEventListener("DOMContentLoaded", () => {
     const sendButton = document.getElementById("sendButton");
     const friendIdInput = document.getElementById("friendIdInput");
@@ -321,13 +301,11 @@ document.addEventListener("DOMContentLoaded", () => {
             } else {
                 alert("User does not exist with that ID");
             }
-
         } catch (error) {
             alert(`User does not exist with ID ${friendId}`);
         }
     });
 });
-
 
 async function sendMessage() {
     const messageText = inputField.value.trim();
@@ -583,6 +561,7 @@ socket.on("broadcast_message", async (data) => {
     const timestamp = data.timestamp || new Date().toISOString();
     const file_location = data.file_location;
     const messageId = data.message_id;
+    let seen = data.seen || 0; // Get the seen status
 
     // Skip if no valid data
     if (!username || (!message && !file_location) || !messageId) {
@@ -595,6 +574,8 @@ socket.on("broadcast_message", async (data) => {
     const isFromFriendToCurrentUser = (senderId == friendId && recipientId == userId);
     if (!(isFromCurrentUserToFriend || isFromFriendToCurrentUser)) {
         console.log("Message not for this conversation, skipping...");
+        // Fetch updated unread counts
+        fetchUnreadCounts();
         return;
     }
 
@@ -608,7 +589,49 @@ socket.on("broadcast_message", async (data) => {
 
     const messageDiv = document.createElement("div");
     messageDiv.classList.add("message", "bot-message");
+
+    // Check if the message is visible immediately (e.g., chat is at the bottom)
+    const isAtBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop <= messagesContainer.clientHeight + 50; // Within 50px of the bottom
+    if (isAtBottom && !seen) {
+        // Mark the message as seen immediately since the user is viewing the chat
+        try {
+            const response = await fetch("/mark_messages_seen", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    message_ids: [messageId],
+                    friend_id: friendId
+                }),
+                credentials: "include"
+            });
+
+            if (!response.ok) {
+                console.error(`Failed to mark new message ${messageId} as seen: HTTP ${response.status}`);
+                const text = await response.text();
+                console.error("Response body:", text);
+                return;
+            }
+
+            const data = await response.json();
+            if (data.status === "success") {
+                seen = 1; // Update the seen status
+                console.log(`Marked new message ${messageId} as seen immediately`);
+                // Fetch updated unread counts
+                fetchUnreadCounts();
+            }
+        } catch (error) {
+            console.error("Error marking new message as seen:", error);
+        }
+    }
+
     messageDiv.dataset.messageId = messageId;
+    messageDiv.dataset.seen = seen ? "1" : "0"; // Add seen status
+    if (!seen) {
+        // Fetch updated unread counts after marking as seen
+        fetchUnreadCounts();
+    }
     const messageContent = document.createElement("div");
     messageContent.classList.add("message-content");
 
@@ -771,41 +794,36 @@ socket.on("broadcast_message", async (data) => {
 
     scrollToBottom();
     renderLatex();
+    observeUnreadMessages(); // Observe the new message for visibility
 });
-
-
-
 
 function scrollToBottom() {
     const messagesContainer = document.querySelector(".messages");
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
 
-
-
-
 document.addEventListener("DOMContentLoaded", function() {
-var openRequestsPopup = document.querySelector('.icon_top[src="/static/inbox.svg"]');
-var friendRequestsOverlay = document.getElementById('friendRequestsOverlay');
-var closeRequestsPopup = document.getElementById('closeRequestsPopup');
+    var openRequestsPopup = document.querySelector('.icon_top[src="/static/inbox.svg"]');
+    var friendRequestsOverlay = document.getElementById('friendRequestsOverlay');
+    var closeRequestsPopup = document.getElementById('closeRequestsPopup');
 
-friendRequestsOverlay.style.display = 'none';
+    friendRequestsOverlay.style.display = 'none';
 
-openRequestsPopup.addEventListener('click', function() {
-friendRequestsOverlay.style.display = 'flex';
-});
+    openRequestsPopup.addEventListener('click', function() {
+        friendRequestsOverlay.style.display = 'flex';
+    });
 
-function closeFriendRequestsPopup() {
-friendRequestsOverlay.style.display = 'none';
-}
+    function closeFriendRequestsPopup() {
+        friendRequestsOverlay.style.display = 'none';
+    }
 
-friendRequestsOverlay.addEventListener('click', function(event) {
-if (event.target === friendRequestsOverlay) {
-    closeFriendRequestsPopup();
-}
-});
+    friendRequestsOverlay.addEventListener('click', function(event) {
+        if (event.target === friendRequestsOverlay) {
+            closeFriendRequestsPopup();
+        }
+    });
 
-closeRequestsPopup.addEventListener('click', closeFriendRequestsPopup);
+    closeRequestsPopup.addEventListener('click', closeFriendRequestsPopup);
 });
 
 function ensureArray(value) {
@@ -813,12 +831,130 @@ function ensureArray(value) {
     return Array.isArray(value) ? value : [value];
 }
 
-document.getElementById('lgout').addEventListener('click', function() {
-        document.cookie.split(";").forEach(function(cookie) {
-            const [name] = cookie.split("=");
-            document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/";
+// Set up Intersection Observer to mark messages as seen when they become visible
+const observerOptions = {
+    root: messagesContainer, // Use the messages container as the root
+    rootMargin: "0px",
+    threshold: 0.1 // Trigger when 10% of the message is visible
+};
+
+const observer = new IntersectionObserver((entries, observer) => {
+    entries.forEach(async (entry) => {
+        if (entry.isIntersecting) {
+            console.log("Message is visible in viewport:", entry.target.dataset.messageId);
+
+            const messageDiv = entry.target;
+            const messageId = messageDiv.dataset.messageId;
+            const userId = getCookie("id");
+            const friendId = new URLSearchParams(window.location.search).get('friend_id');
+            const senderId = messageDiv.classList.contains("bot-message") ? friendId : userId;
+
+            // Only mark messages from friends as seen
+            if (!messageDiv.classList.contains("bot-message")) {
+                console.log("Skipping message - not a bot-message:", messageId);
+                return;
+            }
+
+            // Wait 3 seconds before marking as seen
+            setTimeout(async () => {
+                console.log(`Marking message ${messageId} as seen for friend ${friendId}`);
+
+                // Mark the message as seen on the server
+                try {
+                    const response = await fetch("/mark_messages_seen", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            message_ids: [messageId],
+                            friend_id: friendId
+                        }),
+                        credentials: "include"
+                    });
+
+                    if (!response.ok) {
+                        console.error(`Failed to mark message ${messageId} as seen: HTTP ${response.status}`);
+                        const text = await response.text();
+                        console.error("Response body:", text);
+                        return;
+                    }
+
+                    const data = await response.json();
+                    if (data.status === "success") {
+                        console.log(`Successfully marked message ${messageId} as seen after 3 seconds`);
+                        messageDiv.dataset.seen = "1"; // Update the seen status in the DOM
+                        // Check if there are any remaining unread messages from this friend
+                        const remainingUnread = messagesContainer.querySelectorAll(`.message.bot-message[data-sender-id="${senderId}"]:not([data-seen="1"])`);
+                        if (remainingUnread.length === 0) {
+                            console.log(`No more unread messages from friend ${senderId}, updating unread counts`);
+                            fetchUnreadCounts();
+                        }
+                    } else {
+                        console.error("Failed to mark message as seen:", data);
+                    }
+                } catch (error) {
+                    console.error("Error marking message as seen:", error);
+                }
+            }, 3000); // 3-second delay
+
+            // Stop observing this message
+            observer.unobserve(messageDiv);
+        }
     });
-        window.location.href = "/logout";
+}, observerOptions);
+
+// Function to observe unread messages
+function observeUnreadMessages() {
+    const unreadMessages = messagesContainer.querySelectorAll(".message.bot-message:not([data-seen='1'])");
+    console.log(`Observing ${unreadMessages.length} unread messages`);
+    unreadMessages.forEach((message) => {
+        message.dataset.senderId = new URLSearchParams(window.location.search).get('friend_id');
+        observer.observe(message);
+    });
+}
+
+async function fetchUnreadCounts() {
+    try {
+        const response = await fetch('/get_unread_counts', {
+            method: 'GET',
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            console.error(`Failed to fetch unread counts: HTTP ${response.status}`);
+            return;
+        }
+
+        const data = await response.json();
+        const unreadCounts = data.unread_counts || {};
+        console.log("Unread counts:", unreadCounts);
+
+        // Update the sidebar based on unread counts
+        for (const friendId in unreadCounts) {
+            const count = unreadCounts[friendId];
+            const friendItem = document.querySelector(`span[data-friend-id="${friendId}"]`);
+            if (friendItem) {
+                if (count > 0) {
+                    console.log(`Adding 'unread' class to friend ${friendId} (count: ${count})`);
+                    friendItem.classList.add("unread");
+                } else {
+                    console.log(`Removing 'unread' class from friend ${friendId} (count: ${count})`);
+                    friendItem.classList.remove("unread");
+                }
+            }
+        }
+    } catch (error) {
+        console.error("Error fetching unread counts:", error);
+    }
+}
+
+document.getElementById('lgout').addEventListener('click', function() {
+    document.cookie.split(";").forEach(function(cookie) {
+        const [name] = cookie.split("=");
+        document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/";
+    });
+    window.location.href = "/logout";
 });
 
 document.addEventListener("DOMContentLoaded", async function () {
@@ -840,162 +976,208 @@ document.addEventListener("DOMContentLoaded", async function () {
     let allMessagesLoaded = false;
 
     // Fetch and render messages for the current conversation
-   async function loadMessages(offset = 0, append = false) {
-    if (isLoadingMessages || allMessagesLoaded) return;
-    isLoadingMessages = true;
+    async function loadMessages(offset = 0, append = false) {
+        if (isLoadingMessages || allMessagesLoaded) return;
+        isLoadingMessages = true;
 
-    try {
-        const response = await fetch(`/messages?friend_id=${friendId}&limit=${messageLimit}&offset=${offset}`);
-        const messages = await response.json();
+        try {
+            const response = await fetch(`/messages?friend_id=${friendId}&limit=${messageLimit}&offset=${offset}`);
+            const messages = await response.json();
 
-        if (messages.length < messageLimit) {
-            allMessagesLoaded = true; // No more messages to load
-        }
+            if (messages.length < messageLimit) {
+                allMessagesLoaded = true; // No more messages to load
+            }
 
-        let lastDate = null; // Track the date of the last message to detect date changes
-        const existingSeparators = new Set(); // Track which date separators already exist
+            let lastDate = null; // Track the date of the last message to detect date changes
+            const existingSeparators = new Set(); // Track which date separators already exist
 
-        // If appending (lazy loading), check existing separators
-        if (append) {
-            const children = Array.from(messagesContainer.children);
-            for (const child of children) {
-                if (child.classList.contains("date-separator")) {
-                    existingSeparators.add(child.textContent);
+            // If appending (lazy loading), check existing separators
+            if (append) {
+                const children = Array.from(messagesContainer.children);
+                for (const child of children) {
+                    if (child.classList.contains("date-separator")) {
+                        existingSeparators.add(child.textContent);
+                    }
                 }
             }
-        }
 
-        for (const msg of messages) {
-            const messageDate = new Date(msg.timestamp);
-            const messageDateString = messageDate.toLocaleDateString(); // e.g., "3/23/2025"
+            for (const msg of messages) {
+                const messageDate = new Date(msg.timestamp);
+                const messageDateString = messageDate.toLocaleDateString(); // e.g., "3/23/2025"
 
-            // Format the date (e.g., "Today", "Yesterday", or "March 23, 2025")
-            const today = new Date();
-            const yesterday = new Date(today);
-            yesterday.setDate(today.getDate() - 1);
+                // Format the date (e.g., "Today", "Yesterday", or "March 23, 2025")
+                const today = new Date();
+                const yesterday = new Date(today);
+                yesterday.setDate(today.getDate() - 1);
 
-            const todayString = today.toLocaleDateString();
-            const yesterdayString = yesterday.toLocaleDateString();
+                const todayString = today.toLocaleDateString();
+                const yesterdayString = yesterday.toLocaleDateString();
 
-            let dateLabel;
-            if (messageDateString === todayString) {
-                dateLabel = "Today";
-            } else if (messageDateString === yesterdayString) {
-                dateLabel = "Yesterday";
-            } else {
-                dateLabel = messageDate.toLocaleDateString(undefined, {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric"
-                }); // e.g., "March 23, 2025"
-            }
+                let dateLabel;
+                if (messageDateString === todayString) {
+                    dateLabel = "Today";
+                } else if (messageDateString === yesterdayString) {
+                    dateLabel = "Yesterday";
+                } else {
+                    dateLabel = messageDate.toLocaleDateString(undefined, {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric"
+                    }); // e.g., "March 23, 2025"
+                }
 
-            // Check if the date has changed and if a separator for this date already exists
-            if (lastDate !== messageDateString && !existingSeparators.has(dateLabel)) {
-                const dateSeparator = document.createElement("div");
-                dateSeparator.classList.add("date-separator");
-                dateSeparator.textContent = dateLabel;
+                // Check if the date has changed and if a separator for this date already exists
+                if (lastDate !== messageDateString && !existingSeparators.has(dateLabel)) {
+                    const dateSeparator = document.createElement("div");
+                    dateSeparator.classList.add("date-separator");
+                    dateSeparator.textContent = dateLabel;
+
+                    if (append) {
+                        messagesContainer.insertBefore(dateSeparator, messagesContainer.firstChild);
+                    } else {
+                        messagesContainer.appendChild(dateSeparator);
+                    }
+
+                    existingSeparators.add(dateLabel);
+                    lastDate = messageDateString;
+                }
+
+                // Render the message
+                const messageDiv = document.createElement("div");
+                const isUserMessage = msg.username === getCookie("username");
+                messageDiv.classList.add("message", isUserMessage ? "user-message" : "bot-message");
+                messageDiv.dataset.messageId = msg.id;
+                messageDiv.dataset.seen = msg.seen ? "1" : "0"; // Add seen status
+                if (!isUserMessage && !msg.seen) {
+                    // Fetch updated unread counts
+                    fetchUnreadCounts();
+                }
+                const messageContent = document.createElement("div");
+                messageContent.classList.add("message-content");
+
+                // Add reply preview if the message is a reply
+                if (msg.reply_to) {
+                    const originalMessageElement = messagesContainer.querySelector(`[data-message-id="${msg.reply_to}"] .message-content`);
+                    let originalMessage = originalMessageElement?.textContent || msg.message || "Original message";
+
+                    // Remove the timestamp from the original message
+                    const tempDiv = document.createElement("div");
+                    tempDiv.innerHTML = originalMessageElement?.innerHTML || originalMessage;
+                    const timestampDiv = tempDiv.querySelector(".message-timestamp");
+                    if (timestampDiv) {
+                        timestampDiv.remove();
+                    }
+                    originalMessage = tempDiv.textContent || tempDiv.innerText;
+
+                    // Truncate the message to 10 characters and add "...." if longer
+                    const truncatedMessage = originalMessage.length > 10 ? originalMessage.substring(0, 10) + "...." : originalMessage;
+
+                    messageContent.innerHTML += `
+                        <div class="replied-message" data-reply-to="${msg.reply_to}">
+                            Replying to ${msg.username}: ${truncatedMessage}
+                        </div>
+                    `;
+                }
+
+                if (msg.file_location) {
+                    messageContent.innerHTML += `<a href="/uploads/${msg.file_location}" target="_blank">${msg.file_location}</a>`;
+                }
+                if (msg.message) {
+                    messageContent.innerHTML += formatMessage(msg.message);
+                }
+
+                // Add timestamp
+                const timestampDiv = document.createElement("div");
+                timestampDiv.classList.add("message-timestamp");
+                timestampDiv.textContent = new Date(msg.timestamp).toLocaleTimeString(); // Parse as UTC and convert to local
+                messageContent.appendChild(timestampDiv);
+
+                const replySvg = document.createElement("img");
+                replySvg.classList.add("reply-btn");
+                replySvg.src = "/static/reply.svg";
+                replySvg.alt = "Reply";
+                replySvg.addEventListener("click", () => handleReply(messageDiv.dataset.messageId, msg.username, msg.message || msg.file_location));
+
+                let profilePicSrc = "/static/default-avatar.png";
+                const profileId = msg.username === getCookie("username") ? userId : friendId;
+                try {
+                    const response = await fetch(`/profile?id=${profileId}`);
+                    const profileData = await response.json();
+                    if (profileData[0]?.image1) {
+                        profilePicSrc = `data:image/jpeg;base64,${profileData[0].image1}`;
+                    }
+                } catch (error) {
+                    console.error("Error fetching profile picture:", error);
+                }
+
+                const profilePic = document.createElement("img");
+                profilePic.classList.add("message-pfp");
+                profilePic.src = profilePicSrc;
+                profilePic.alt = "Profile Picture";
+
+                messageDiv.appendChild(isUserMessage ? replySvg : profilePic);
+                messageDiv.appendChild(messageContent);
+                messageDiv.appendChild(isUserMessage ? profilePic : replySvg);
 
                 if (append) {
-                    messagesContainer.insertBefore(dateSeparator, messagesContainer.firstChild);
+                    messagesContainer.insertBefore(messageDiv, messagesContainer.firstChild);
                 } else {
-                    messagesContainer.appendChild(dateSeparator);
+                    messagesContainer.appendChild(messageDiv);
                 }
-
-                existingSeparators.add(dateLabel);
-                lastDate = messageDateString;
             }
 
-            // Render the message
-            const messageDiv = document.createElement("div");
-            messageDiv.classList.add("message", msg.username === getCookie("username") ? "user-message" : "bot-message");
-            messageDiv.dataset.messageId = msg.id;
-            const messageContent = document.createElement("div");
-            messageContent.classList.add("message-content");
-
-            // Add reply preview if the message is a reply
-            if (msg.reply_to) {
-                const originalMessageElement = messagesContainer.querySelector(`[data-message-id="${msg.reply_to}"] .message-content`);
-                let originalMessage = originalMessageElement?.textContent || msg.message || "Original message";
-
-                // Remove the timestamp from the original message
-                const tempDiv = document.createElement("div");
-                tempDiv.innerHTML = originalMessageElement?.innerHTML || originalMessage;
-                const timestampDiv = tempDiv.querySelector(".message-timestamp");
-                if (timestampDiv) {
-                    timestampDiv.remove();
-                }
-                originalMessage = tempDiv.textContent || tempDiv.innerText;
-
-                // Truncate the message to 10 characters and add "...." if longer
-                const truncatedMessage = originalMessage.length > 10 ? originalMessage.substring(0, 10) + "...." : originalMessage;
-
-                messageContent.innerHTML += `
-                    <div class="replied-message" data-reply-to="${msg.reply_to}">
-                        Replying to ${msg.username}: ${truncatedMessage}
-                    </div>
-                `;
+            if (!append) {
+                scrollToBottom(); // Scroll to the bottom for the initial load
             }
+            renderLatex();
+            messageOffset += messages.length;
+            observeUnreadMessages(); // Observe unread messages for visibility
 
-            if (msg.file_location) {
-                messageContent.innerHTML += `<a href="/uploads/${msg.file_location}" target="_blank">${msg.file_location}</a>`;
+            // After loading messages, check if we're in this friend's DM and mark messages as seen after 3 seconds
+            if (friendId) {
+                setTimeout(async () => {
+                    const unreadMessages = messagesContainer.querySelectorAll(`.message.bot-message:not([data-seen="1"])`);
+                    const messageIds = Array.from(unreadMessages).map(msg => msg.dataset.messageId);
+                    if (messageIds.length > 0) {
+                        try {
+                            const response = await fetch("/mark_messages_seen", {
+                                method: "POST",
+                                headers: {
+                                    "Content-Type": "application/json"
+                                },
+                                body: JSON.stringify({
+                                    message_ids: messageIds,
+                                    friend_id: friendId
+                                }),
+                                credentials: "include"
+                            });
+
+                            if (!response.ok) {
+                                console.error(`Failed to mark messages as seen: HTTP ${response.status}`);
+                                const text = await response.text();
+                                console.error("Response body:", text);
+                                return;
+                            }
+
+                            const data = await response.json();
+                            if (data.status === "success") {
+                                console.log(`Successfully marked messages ${messageIds} as seen after 3 seconds`);
+                                unreadMessages.forEach(msg => msg.dataset.seen = "1");
+                                // Fetch updated unread counts
+                                fetchUnreadCounts();
+                            }
+                        } catch (error) {
+                            console.error("Error marking messages as seen after 3 seconds:", error);
+                        }
+                    }
+                }, 3000); // 3-second delay
             }
-            if (msg.message) {
-                messageContent.innerHTML += formatMessage(msg.message);
-            }
-
-            // Add timestamp
-            const timestampDiv = document.createElement("div");
-            timestampDiv.classList.add("message-timestamp");
-            timestampDiv.textContent = new Date(msg.timestamp).toLocaleTimeString(); // Parse as UTC and convert to local
-            messageContent.appendChild(timestampDiv);
-
-            const replySvg = document.createElement("img");
-            replySvg.classList.add("reply-btn");
-            replySvg.src = "/static/reply.svg";
-            replySvg.alt = "Reply";
-            replySvg.addEventListener("click", () => handleReply(messageDiv.dataset.messageId, msg.username, msg.message || msg.file_location));
-
-            let profilePicSrc = "/static/default-avatar.png";
-            const profileId = msg.username === getCookie("username") ? userId : friendId;
-            try {
-                const response = await fetch(`/profile?id=${profileId}`);
-                const profileData = await response.json();
-                if (profileData[0]?.image1) {
-                    profilePicSrc = `data:image/jpeg;base64,${profileData[0].image1}`;
-                }
-            } catch (error) {
-                console.error("Error fetching profile picture:", error);
-            }
-
-            const profilePic = document.createElement("img");
-            profilePic.classList.add("message-pfp");
-            profilePic.src = profilePicSrc;
-            profilePic.alt = "Profile Picture";
-
-            messageDiv.appendChild(msg.username === getCookie("username") ? replySvg : profilePic);
-            messageDiv.appendChild(messageContent);
-            messageDiv.appendChild(msg.username === getCookie("username") ? profilePic : replySvg);
-
-            if (append) {
-                messagesContainer.insertBefore(messageDiv, messagesContainer.firstChild);
-            } else {
-                messagesContainer.appendChild(messageDiv);
-            }
+        } catch (error) {
+            console.error("Error fetching messages:", error);
+        } finally {
+            isLoadingMessages = false;
         }
-
-        if (!append) {
-            scrollToBottom(); // Scroll to the bottom for the initial load
-        }
-        renderLatex();
-        messageOffset += messages.length;
-
-    } catch (error) {
-        console.error("Error fetching messages:", error);
-    } finally {
-        isLoadingMessages = false;
     }
-}
 
     // Initial load of messages
     if (friendId) {
@@ -1044,12 +1226,35 @@ document.addEventListener("DOMContentLoaded", async function () {
                             friendData = friendData[0];
                             if (friendData.username) {
                                 const friendElement = document.createElement("span");
+                                friendElement.setAttribute("data-friend-id", friend); // Add data-friend-id attribute
                                 friendElement.innerHTML = `
                                     <img class="pfp" src="data:image/jpeg;base64,${friendData.image1}" alt="hehe">
                                     ${friendData.username}
                                 `;
 
-                                friendElement.addEventListener("click", () => {
+                                friendElement.addEventListener("click", async () => {
+                                    // Mark messages as seen for this friend
+                                    try {
+                                        const response = await fetch("/mark_messages_seen", {
+                                            method: "POST",
+                                            headers: {
+                                                "Content-Type": "application/json"
+                                            },
+                                            body: JSON.stringify({
+                                                message_ids: [], // Empty array to mark all messages as seen
+                                                friend_id: friend
+                                            }),
+                                            credentials: "include"
+                                        });
+
+                                        if (response.ok) {
+                                            console.log(`Marked messages as seen for friend ${friend}`);
+                                            // Fetch updated unread counts
+                                            fetchUnreadCounts();
+                                        }
+                                    } catch (error) {
+                                        console.error("Error marking messages as seen:", error);
+                                    }
                                     window.location.href = `/?friend_id=${friend}`;
                                 });
 
@@ -1058,6 +1263,11 @@ document.addEventListener("DOMContentLoaded", async function () {
                         })
                         .catch(error => console.error("Error fetching friend data:", error));
                 });
+
+                // Fetch unread counts after rendering friends
+                setTimeout(() => {
+                    fetchUnreadCounts();
+                }, 1000); // Delay to ensure DOM updates are complete
             } else {
                 const friendElement = document.createElement("span");
                 friendElement.innerHTML = `
@@ -1178,7 +1388,6 @@ cancelReply.addEventListener("click", () => {
     inputField.value = "";
     autoResizeTextarea(inputField);
 });
-
 
 messagesContainer.addEventListener("click", (e) => {
     const repliedMessage = e.target.closest(".replied-message");

@@ -658,3 +658,12 @@ textarea{
     justify-content: center;
 }
 
+
+
+span.unread::after {
+    content: "•";
+    color: orange !important;
+    font-size: 1.5em !important;
+    margin-left: 5px !important;
+    vertical-align: middle !important;
+}
