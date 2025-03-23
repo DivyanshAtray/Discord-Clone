@@ -18,13 +18,13 @@ if not os.path.exists(db_path):
     ''')
     cursor.execute('''
         CREATE TABLE messages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT NOT NULL,
-            "to" TEXT,
-            message TEXT,
-            time timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            file_location TEXT
-        )
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL,
+    message TEXT NOT NULL,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    file_location TEXT,
+    recipient_id INTEGER
+)
     ''')
     cursor.execute('''
             CREATE TABLE friends (

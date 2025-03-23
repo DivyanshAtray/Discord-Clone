@@ -42,8 +42,7 @@
         </div>
 
         <div class="chat">
-
-            <div class="top">
+   <div class="top">
                 <span class="name"><img class="pfp" src="{% if friend_pfp %}data:image/jpeg;base64,{{ friend_pfp }}{% else %}/static/default-avatar.png{% endif %}" alt="">
     {{ friend_name }}
 
@@ -75,44 +74,31 @@
                         <div id="closeRequestsPopup" class="close-btn">&times;</div>
                         <p>Incoming Friend Requests</p>
                         <div id="friendRequestsList">
-                            <!--                            <div class="friend-request">-->
-                            <!--                                <span>Friend 1</span>-->
-                            <!--                                <img class="accept-btn" src="/static/accept.svg" alt="Accept">-->
-                            <!--                                <img class="deny-btn" src="/static/deny.svg" alt="Deny">-->
-                            <!--                            </div>-->
-                            <!--                            <div class="friend-request">-->
-                            <!--                                <span>Friend 2</span>-->
-                            <!--                                <img class="accept-btn" src="/static/accept.svg" alt="Accept">-->
-                            <!--                                <img class="deny-btn" src="/static/deny.svg" alt="Deny">-->
-                            <!--                            </div>-->
+
                         </div>
                     </div>
                 </div>
 
             </div>
             <hr>
-
-            <div class="messages"></div>
-
-
-
-            <div class="inputbar">
-                <!-- <textarea type="text" id="messageInput" placeholder="Message..."></textarea>
-                <input type="file" id="fileInput" style="display: none;">
-                <img class="send" src="/static/send.svg" alt="send">
-                <img class="attachment" src="/static/attachment.svg" alt="attachment"> -->
-
-                <div class="reply-preview" id="replyPreview" style="display: none;">
-                    <span> <span id="replyToUsername"></span></span>
-                    <p id="replyMessageText"></p>
-                    <button id="cancelReply">✖</button>
-                </div>
-                <textarea type="text" id="messageInput" placeholder="Message..."></textarea>
-                <input type="file" id="fileInput" style="display: none;">
-                <img class="send" src="/static/send.svg" alt="send">
-                <img class="attachment" src="/static/attachment.svg" alt="attachment">
+    <div class="messages" >
+        <!-- Messages will be loaded here -->
+    </div>
+    <div class="inputbar">
+        <form id="message-form" action="/send_message" method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="friend_id" value="{{ friend_id }}">
+            <div class="reply-preview" id="replyPreview" style="display: none;">
+                <span> <span id="replyToUsername"></span></span>
+                <p id="replyMessageText"></p>
+                <button id="cancelReply">✖</button>
             </div>
-        </div>
+            <textarea name="message" id="messageInput" placeholder="Message..." required></textarea>
+            <input type="file" name="file" id="fileInput" style="display: none;">
+            <img class="send" src="/static/send.svg" alt="send">
+            <img class="attachment" src="/static/attachment.svg" alt="attachment">
+        </form>
+    </div>
+</div>
     </div>
 </body>
 

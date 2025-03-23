@@ -60,14 +60,52 @@ def get_user_friends(user_id):
 
 @socketio.on("connect")
 def handle_connect():
-    # Handle a user connection
-    print("A user connected")
-
+    if 'username' not in session:
+        return
+    username = session['username']
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
+    user_id = cursor.fetchone()
+    conn.close()
+    if user_id:
+        user_id = user_id[0]
+        socketio.server.enter_room(sid=request.sid, room=str(user_id))
+        print(f"User {username} (ID: {user_id}) connected and joined room {user_id}")
 
 @socketio.on("disconnect")
 def handle_disconnect():
-    # Remove a user from the connected users (if needed)
     print("A user disconnected")
+
+@socketio.on("send_message")
+def handle_send_message(data):
+    username = data["username"]
+    if username is None:
+        return
+    message = data["message"]
+    friend_id = data.get("friend_id")  # Get the recipient's ID
+    if not friend_id:
+        print("No friend_id provided in send_message event")
+        return
+
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
+    user_id = cursor.fetchone()
+    conn.close()
+    if not user_id:
+        print(f"No user_id found for username {username}")
+        return
+    user_id = user_id[0]
+
+    print(f"{username} (ID: {user_id}) to Friend ID {friend_id}: {message}")
+
+    emit("broadcast_message",
+         {"username": username, "message": message, "userId": user_id, "friendId": friend_id},
+         room=str(user_id))  # Send to sender
+    emit("broadcast_message",
+         {"username": username, "message": message, "userId": user_id, "friendId": friend_id},
+         room=str(friend_id))  # Send to recipient
 
 @app.route('/get-friend-data', methods=['GET'])
 def get_user_data():
@@ -259,6 +297,54 @@ def add_friend():
         print(e)
         return jsonify({"error": str(e)}), 500
 
+
+@app.route('/remove_request')
+def remove_request():
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    # Get the current user's ID
+    cursor.execute('SELECT id FROM users WHERE username = ?', (session['username'],))
+    user_id = cursor.fetchone()[0]
+
+    # Get the friend ID (the ID of the user who sent the request)
+    friend_id = request.args.get('id', type=int)
+
+    # Check for missing parameters
+    if not user_id or not friend_id:
+        conn.close()
+        return jsonify({"error": "Missing 'id' parameter"}), 400
+
+    try:
+        # Check if there is an incoming friend request from the friendId
+        cursor.execute('SELECT incoming_request FROM friends WHERE user_id = ?', (user_id,))
+        incoming_requests = cursor.fetchone()
+
+        if not incoming_requests or not incoming_requests[0]:
+            conn.close()
+            return jsonify({"error": "No friend request from this user exists."}), 400
+
+        # Parse the incoming request list
+        incoming_request_list = incoming_requests[0].split(',')
+        if str(friend_id) not in incoming_request_list:
+            conn.close()
+            return jsonify({"error": "No friend request from this user exists."}), 400
+
+        # Remove the friendId from the incoming request list
+        incoming_request_list.remove(str(friend_id))
+        updated_requests = ','.join(incoming_request_list) if incoming_request_list else None
+
+        # Update the incoming_request list in the database
+        cursor.execute('UPDATE friends SET incoming_request = ? WHERE user_id = ?', (updated_requests, user_id))
+
+        conn.commit()
+        conn.close()
+        return jsonify({"status": "Friend request removed successfully!"}), 200
+
+    except Exception as e:
+        conn.close()
+        print(e)
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route('/profile', methods=['GET'])
@@ -479,23 +565,7 @@ def get_username():
         return jsonify({"error": f"Server error: {str(e)}"}), 500
 
 
-@socketio.on("send_message")
-def handle_send_message(data):
-    username = data["username"]
-    if username is None:
-        return
-    message = data["message"]
-    print(f"{username}: {message}")
 
-    # Add userId to the broadcast
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
-    user_id = cursor.fetchone()
-    conn.close()
-    user_id = user_id[0] if user_id else None
-
-    emit("broadcast_message", {"username": username, "message": message, "userId": user_id}, broadcast=True)
 
 
 @app.route('/send_message', methods=['POST'])
@@ -506,22 +576,24 @@ def send_message():
 
     username = session['username']
     message = request.form['message']
-    file = request.files.get('file')  # File received via the "send_message" endpoint
+    file = request.files.get('file')
+    friend_id = request.form.get('friend_id')  # Get friend_id from the form data
+
+    if not friend_id:
+        return jsonify({"error": "No friend_id provided"}), 400
 
     new_file_name = None
 
     if file:
-        # Rename and save the uploaded file
         random_suffix = generate_random_string()
         filename, ext = os.path.splitext(file.filename)
         new_file_name = f"{filename}_{random_suffix}{ext}"
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], new_file_name))
 
-    # Save the message and file_location in the database
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO messages (username, message, file_location) VALUES (?, ?, ?)",
-                   (username, message, new_file_name))
+    cursor.execute("INSERT INTO messages (username, message, file_location, recipient_id) VALUES (?, ?, ?, ?)",
+                   (username, message, new_file_name, friend_id))
     conn.commit()
     conn.close()
     return jsonify({"status": "success"})
