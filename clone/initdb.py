@@ -57,6 +57,14 @@ except sqlite3.OperationalError:
     # Column already exists, no action needed
     pass
 
+# Migration: Add image1_format and image2_format columns if they don't exist
+cursor.execute("PRAGMA table_info(users)")
+columns = [col[1] for col in cursor.fetchall()]
+if 'image1_format' not in columns:
+    cursor.execute("ALTER TABLE users ADD COLUMN image1_format TEXT")
+if 'image2_format' not in columns:
+    cursor.execute("ALTER TABLE users ADD COLUMN image2_format TEXT")
+
 conn.commit()
 conn.close()
 

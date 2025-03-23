@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Profile - Discord</title>
+
+    <link rel="stylesheet" href="/static/login_page.css">
+
+    <!-- Google Material Symbols for Eye Icon -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet">
+
+    <!-- Cropper.js 1.6.1 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+
+    <style>
+        #loading {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .preview-image {
+            max-width: 100px;
+            max-height: 100px;
+            margin-top: 10px;
+            display: none;
+            /* Initially hidden */
+        }
+        .box {
+            width: 380px;
+            height: 600px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0px;
+            padding: 0px;
+        }
+        form {
+            margin: 0px;
+            padding: 0px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="main">
+        <div class="box">
+            <form id="upload-form" action="/edit_profile" method="post" enctype="multipart/form-data">
+
+                <!-- Flash messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="flash-message {{ category }}">{{ message }}</div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <label for="username">Username*</label><br>
+                <input type="text" id="username" name="username" value="{{ current_username }}" required><br><br>
+
+                <label for="password">Password (leave blank to keep current)</label><br>
+                <div class="password-container">
+                    <input type="password" id="password" name="password">
+                    <span id="togglePassword" class="material-symbols-outlined">visibility</span>
+                </div><br><br>
+
+                <label for="image1">Upload PFP (current PFP shown below):</label><br>
+                {% if current_pfp %}
+                    <img src="data:image/jpeg;base64,{{ current_pfp }}" style="max-width: 100px; max-height: 100px;" alt="Current PFP">
+                {% else %}
+                    <p>No current PFP</p>
+                {% endif %}
+                <input type="file" id="image1" accept="image/gif, image/png, image/jpeg"><br>
+                <div class="preview-container">
+                    <span id="pfp-filename"></span>
+                    <img id="pfp-preview" class="preview-image">
+                </div>
+                <input type="hidden" id="image1-base64" name="image1-base64">
+                <input type="hidden" id="image1-format" name="image1-format">
+                <br>
+
+                <label for="image2">Upload Banner (current banner shown below):</label><br>
+                {% if current_banner %}
+                    <img src="data:image/jpeg;base64,{{ current_banner }}" style="max-width: 200px; max-height: 100px;" alt="Current Banner">
+                {% else %}
+                    <p>No current banner</p>
+                {% endif %}
+                <input type="file" id="image2" accept="image/gif, image/png, image/jpeg"><br>
+                <div class="preview-container">
+                    <span id="banner-filename"></span>
+                    <img id="banner-preview" class="preview-image">
+                </div>
+                <input type="hidden" id="image2-base64" name="image2-base64">
+                <input type="hidden" id="image2-format" name="image2-format">
+                <br>
+
+                <button type="submit">Save Changes</button>
+
+            </form>
+        </div>
+
+        <div id="crop-modal" class="crop-modal">
+            <div class="crop-container">
+                <div id="crop-note" style="color: white; text-align: center; margin-bottom: 10px; display: none;">
+                    Note: Select the crop area on the first frame. The entire GIF will be cropped accordingly on the server.
+                </div>
+                <img id="crop-image" alt="Crop Image">
+                <button id="crop-confirm">Crop and Process</button>
+                <div id="loading" style="display: none; color: white; text-align: center; margin-top: 10px;">
+                    Processing GIF on server... Please wait.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Password Toggle
+        const passwordField = document.getElementById("password");
+        const togglePassword = document.getElementById("togglePassword");
+
+        togglePassword.addEventListener("click", function () {
+            if (passwordField.type === "password") {
+                passwordField.type = "text";
+                this.textContent = "visibility_off";
+                this.style.color = "gray";
+            } else {
+                passwordField.type = "password";
+                this.textContent = "visibility";
+                this.style.color = "white";
+            }
+        });
+
+        // Crop modal elements
+        const cropModal = document.getElementById('crop-modal');
+        const cropImage = document.getElementById('crop-image');
+        const cropConfirm = document.getElementById('crop-confirm');
+        const cropNote = document.getElementById('crop-note');
+        const loading = document.getElementById('loading');
+        let cropper = null;
+        let currentInput = null;
+        let currentAspectRatio = null;
+        let cropData = null;
+
+        // Function to initialize Cropper.js
+        const initializeCropper = (aspectRatio) => {
+            if (cropImage.naturalWidth > 0 && cropImage.naturalHeight > 0) {
+                console.log('Initializing Cropper.js with aspect ratio:', aspectRatio);
+                setTimeout(() => {
+                    cropper = new Cropper(cropImage, {
+                        aspectRatio: aspectRatio,
+                        viewMode: 1,
+                        autoCrop: true,
+                        autoCropArea: 0.8,
+                        ready: function () {
+                            console.log('Cropper ready');
+                        },
+                        crop: function (event) {
+                            console.log('Crop area adjusted:', event.detail);
+                            cropData = event.detail;
+                        }
+                    });
+                }, 100);
+            } else {
+                console.error('Image not fully loaded for cropping');
+                alert('Image not fully loaded. Please try again.');
+                cropModal.style.display = 'none';
+            }
+        };
+
+        // Function to handle image selection and cropping
+        const handleImageSelection = (input, filenameDisplay, previewImage, hiddenInput, hiddenFormat, aspectRatio) => {
+            input.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const url = URL.createObjectURL(file);
+                    cropImage.src = url;
+                    cropModal.style.display = 'flex';
+                    currentInput = input; // Track the current input
+                    currentAspectRatio = aspectRatio; // Track the current aspect ratio
+                    cropData = null;
+
+                    // Reset previous cropper
+                    if (cropper) {
+                        cropper.destroy();
+                        cropper = null;
+                    }
+
+                    // Ensure image is loaded before proceeding
+                    cropImage.onload = () => {
+                        console.log('cropImage loaded with src:', cropImage.src);
+                        if (file.type === 'image/gif') {
+                            cropNote.style.display = 'block';
+                        } else {
+                            cropNote.style.display = 'none';
+                        }
+                        initializeCropper(currentAspectRatio);
+                    };
+                    cropImage.onerror = () => {
+                        console.error('Error loading image:', cropImage.src);
+                        alert('Error loading image. Please try again.');
+                        cropModal.style.display = 'none';
+                    };
+                }
+            });
+        };
+
+        // Single event listener for crop confirmation
+        cropConfirm.addEventListener('click', () => {
+            console.log('Crop button clicked');
+            console.log('Cropper:', cropper);
+            console.log('Crop data:', cropData);
+            console.log('Current input:', currentInput);
+
+            if (cropper && cropData && currentInput) {
+                const file = currentInput.files[0];
+                if (file.type === 'image/gif') {
+                    // Handle GIF cropping server-side
+                    loading.style.display = 'block';
+                    cropConfirm.disabled = true;
+
+                    const formData = new FormData();
+                    formData.append('image', file);
+                    formData.append('crop_x', cropData.x);
+                    formData.append('crop_y', cropData.y);
+                    formData.append('crop_width', cropData.width);
+                    formData.append('crop_height', cropData.height);
+
+                    fetch('/crop-gif', {
+                        method: 'POST',
+                        body: formData
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Determine which input this crop applies to
+                                let filenameDisplay, previewImage, hiddenInput, hiddenFormat;
+                                if (currentInput.id === 'image1') {
+                                    filenameDisplay = document.getElementById('pfp-filename');
+                                    previewImage = document.getElementById('pfp-preview');
+                                    hiddenInput = document.getElementById('image1-base64');
+                                    hiddenFormat = document.getElementById('image1-format');
+                                } else if (currentInput.id === 'image2') {
+                                    filenameDisplay = document.getElementById('banner-filename');
+                                    previewImage = document.getElementById('banner-preview');
+                                    hiddenInput = document.getElementById('image2-base64');
+                                    hiddenFormat = document.getElementById('image2-format');
+                                }
+
+                                // Display a clickable link with data-base64 attribute
+                                filenameDisplay.innerHTML = `<a class="filename-link" href="#" data-base64="${data.base64}">${data.filename}</a>`;
+                                // Store the base64 string and format in the hidden inputs
+                                hiddenInput.value = data.base64;
+                                hiddenFormat.value = data.format || 'gif';
+
+                                // Show preview
+                                previewImage.src = `data:image/${data.format || 'gif'};base64,${data.base64}`;
+                                previewImage.style.display = 'block';
+
+                                // Add click event to open the preview in a new tab
+                                const link = filenameDisplay.querySelector('.filename-link');
+                                link.addEventListener('click', (e) => {
+                                    e.preventDefault();
+                                    const base64Data = link.getAttribute('data-base64');
+                                    const newTab = window.open('', '_blank');
+                                    if (newTab) {
+                                        newTab.document.write(`
+                                            <html>
+                                                <body>
+                                                    <img src="data:image/${data.format || 'gif'};base64,${base64Data}" style="max-width: 100%; max-height: 100vh;">
+                                                </body>
+                                            </html>
+                                        `);
+                                        newTab.document.close();
+                                    } else {
+                                        alert('Please allow popups for this site to view the preview.');
+                                    }
+                                });
+                            } else {
+                                alert('Error processing GIF: ' + data.error);
+                            }
+                            loading.style.display = 'none';
+                            cropConfirm.disabled = false;
+                            cropModal.style.display = 'none';
+                            if (cropper) {
+                                cropper.destroy();
+                                cropper = null;
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error during fetch:', error);
+                            alert('Error submitting crop request: ' + error.message);
+                            loading.style.display = 'none';
+                            cropConfirm.disabled = false;
+                            cropModal.style.display = 'none';
+                            if (cropper) {
+                                cropper.destroy();
+                                cropper = null;
+                            }
+                        });
+                } else {
+                    // Handle static image cropping client-side
+                    const canvas = cropper.getCroppedCanvas();
+                    if (canvas) {
+                        // Determine which input this crop applies to
+                        let filenameDisplay, previewImage, hiddenInput, hiddenFormat;
+                        if (currentInput.id === 'image1') {
+                            filenameDisplay = document.getElementById('pfp-filename');
+                            previewImage = document.getElementById('pfp-preview');
+                            hiddenInput = document.getElementById('image1-base64');
+                            hiddenFormat = document.getElementById('image1-format');
+                        } else if (currentInput.id === 'image2') {
+                            filenameDisplay = document.getElementById('banner-filename');
+                            previewImage = document.getElementById('banner-preview');
+                            hiddenInput = document.getElementById('image2-base64');
+                            hiddenFormat = document.getElementById('image2-format');
+                        }
+
+                        // Convert the cropped canvas to base64
+                        const base64 = canvas.toDataURL(file.type);
+                        const base64Data = base64.split(',')[1]; // Remove the "data:image/..." prefix
+                        const format = file.type.split('/')[1]; // e.g., "jpeg", "png"
+
+                        // Display a clickable link with data-base64 attribute
+                        filenameDisplay.innerHTML = `<a class="filename-link" href="#" data-base64="${base64Data}">${file.name}</a>`;
+                        // Store the base64 string and format in the hidden inputs
+                        hiddenInput.value = base64Data;
+                        hiddenFormat.value = format;
+
+                        // Show preview
+                        previewImage.src = base64;
+                        previewImage.style.display = 'block';
+
+                        // Add click event to open the preview in a new tab
+                        const link = filenameDisplay.querySelector('.filename-link');
+                        link.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            const base64Data = link.getAttribute('data-base64');
+                            const newTab = window.open('', '_blank');
+                            if (newTab) {
+                                newTab.document.write(`
+                                    <html>
+                                        <body>
+                                            <img src="data:image/${format};base64,${base64Data}" style="max-width: 100%; max-height: 100vh;">
+                                        </body>
+                                    </html>
+                                `);
+                                newTab.document.close();
+                            } else {
+                                alert('Please allow popups for this site to view the preview.');
+                            }
+                        });
+
+                        // Close the modal and clean up
+                        cropModal.style.display = 'none';
+                        if (cropper) {
+                            cropper.destroy();
+                            cropper = null;
+                        }
+                    } else {
+                        alert('Error cropping image. Please try again.');
+                    }
+                }
+            } else {
+                console.error('Cropper, crop data, or current input is not initialized');
+                alert('Please adjust the crop area before confirming.');
+            }
+        });
+
+        // PFP handling (1:1)
+        const image1 = document.getElementById('image1');
+        const pfpFilename = document.getElementById('pfp-filename');
+        const pfpPreview = document.getElementById('pfp-preview');
+        const image1Base64 = document.getElementById('image1-base64');
+        const image1Format = document.getElementById('image1-format');
+        handleImageSelection(image1, pfpFilename, pfpPreview, image1Base64, image1Format, 1 / 1);
+
+        // Banner handling (16:9)
+        const image2 = document.getElementById('image2');
+        const bannerFilename = document.getElementById('banner-filename');
+        const bannerPreview = document.getElementById('banner-preview');
+        const image2Base64 = document.getElementById('image2-base64');
+        const image2Format = document.getElementById('image2-format');
+        handleImageSelection(image2, bannerFilename, bannerPreview, image2Base64, image2Format, 16 / 9);
+
+        // Dismiss success messages after 3 seconds
+        setTimeout(() => {
+            document.querySelectorAll(".flash-message.success").forEach(msg => {
+                msg.remove();
+            });
+        }, 3000);
+
+        // Reduce opacity when error message appears
+        const errorMsg = document.querySelector(".flash-message.error");
+        const mainContent = document.querySelector(".main");
+
+        if (errorMsg) {
+            mainContent.style.opacity = "0.5";
+        }
+
+        // Restore opacity when error message is dismissed
+        document.addEventListener("click", function (event) {
+            if (errorMsg && !errorMsg.contains(event.target)) {
+                errorMsg.remove();
+                mainContent.style.opacity = "1";
+            }
+        });
+
+        // Form submission validation
+        document.getElementById('upload-form').addEventListener('submit', function (e) {
+            const image1Base64 = document.getElementById('image1-base64').value;
+            const image2Base64 = document.getElementById('image2-base64').value;
+
+            // If images are uploaded but not cropped, prevent form submission
+            if (image1.files.length > 0 && !image1Base64) {
+                e.preventDefault();
+                alert('Please crop the profile picture before submitting.');
+            }
+            if (image2.files.length > 0 && !image2Base64) {
+                e.preventDefault();
+                alert('Please crop the banner image before submitting.');
+            }
+        });
+    </script>
+</body>
+
+</html>
