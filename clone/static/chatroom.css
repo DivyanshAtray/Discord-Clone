@@ -335,23 +335,27 @@ textarea{
 
 
 
-.user-message {
+/*.user-message {
     background-color: #3a3a3a;
     color: white;
-    align-self: flex-end; /* User messages on the right */
+    min-width:40%;
+    max-width:60%;
+    align-self: flex-end;
     text-align: left;
     float: right;
     clear: both;
-}
+}*/
 
-.bot-message {
+/*.bot-message {
     background-color: #f1f1f19c;
     color: black;
-    align-self: flex-start; /* Bot messages on the left */
+    min-width:40%;
+    max-width:60%;
+    align-self: flex-start;
     text-align: left;
     float: left;
     clear: both;
-}
+}*/
 
 
 
@@ -581,6 +585,8 @@ textarea{
     justify-content: flex-end;
     align-self: flex-end;
     background-color: #3a3a3a;
+    min-width:10%;
+    max-width:60%;
 }
 
 .bot-message {
@@ -589,13 +595,15 @@ textarea{
     align-self: flex-start;
     background-color: #f1f1f19c;
     color: black;
+    min-width:10%;
+    max-width:60%;
 }
 
 .message-pfp {
-    width: 30px;
-    height: 30px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
-    margin: 0 5px; /* Space between picture and content */
+    margin: 0 10px; /* Space between picture and content */
 }
 
 .message-content {
@@ -627,3 +635,10 @@ textarea{
     transition-delay: 0s;
 }
 
+
+.message-timestamp {
+    font-size: 0.8em;
+    color: #888;
+    margin-top: 5px;
+    text-align: right;
+}

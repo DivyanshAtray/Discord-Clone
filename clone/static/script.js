@@ -359,6 +359,13 @@ async function sendMessage() {
         messageContent.innerHTML += formatMessage(messageText);
     }
 
+    // Add timestamp
+    const timestampDiv = document.createElement("div");
+    timestampDiv.classList.add("message-timestamp");
+    const timestamp = new Date().toLocaleString();
+    timestampDiv.textContent = timestamp;
+    messageContent.appendChild(timestampDiv);
+
     const replySvg = document.createElement("img");
     replySvg.classList.add("reply-btn");
     replySvg.src = "/static/reply.svg";
@@ -400,7 +407,7 @@ async function sendMessage() {
         console.log("Sending message:", messageText);
     }
     formData.append("replyTo", replyToMessageId || "");
-    formData.append("friend_id", friendId);  // Add friend_id to form data
+    formData.append("friend_id", friendId);
 
     try {
         console.log("Sending POST to /send_message...");
@@ -411,12 +418,23 @@ async function sendMessage() {
         const data = await response.json();
 
         if (data.status === "success") {
-            console.log("POST successful, emitting socket message:", { message: messageText, username: USER, replyTo: replyToMessageId, friend_id: friendId });
+            console.log("POST successful, emitting socket message:", {
+                message: messageText,
+                username: USER,
+                userId: userId,
+                friendId: friendId,
+                replyTo: replyToMessageId,
+                timestamp: timestamp,
+                file_location: selectedFile ? selectedFile.name : null
+            });
             socket.emit("send_message", {
                 message: messageText,
                 username: USER,
+                userId: userId,
+                friendId: friendId,
                 replyTo: replyToMessageId,
-                friend_id: friendId  // Include friend_id in the socket event
+                timestamp: timestamp,
+                file_location: selectedFile ? selectedFile.name : null
             });
         } else {
             console.error("Server rejected message:", data);
@@ -441,9 +459,11 @@ socket.on("broadcast_message", async (data) => {
     const senderId = data.userId;
     const recipientId = data.friendId;
     const replyTo = data.replyTo;
+    const timestamp = data.timestamp || new Date().toLocaleString();
+    const file_location = data.file_location;
 
     // Skip if no valid data
-    if (!username || (!message && !data.file_location)) {
+    if (!username || (!message && !file_location)) {
         console.error("Invalid broadcast data:", data);
         return;
     }
@@ -457,7 +477,7 @@ socket.on("broadcast_message", async (data) => {
     }
 
     // Skip your own message (already rendered locally in sendMessage)
-    if (username === USER) {
+    if (username === USER && isFromCurrentUserToFriend) {
         console.log("Skipping own message (rendered locally)");
         return;
     }
@@ -478,18 +498,23 @@ socket.on("broadcast_message", async (data) => {
             </div>
         `;
     }
-    if (data.file_location) {
-        messageContent.innerHTML += `<a href="/uploads/${data.file_location}" target="_blank">${data.file_location}</a>`;
+    if (file_location) {
+        messageContent.innerHTML += `<a href="/uploads/${file_location}" target="_blank">${file_location}</a>`;
     }
     if (message) {
         messageContent.innerHTML += formatMessage(message);
     }
 
+    const timestampDiv = document.createElement("div");
+    timestampDiv.classList.add("message-timestamp");
+    timestampDiv.textContent = timestamp;
+    messageContent.appendChild(timestampDiv);
+
     const replySvg = document.createElement("img");
     replySvg.classList.add("reply-btn");
     replySvg.src = "/static/reply.svg";
     replySvg.alt = "Reply";
-    replySvg.addEventListener("click", () => handleReply(messageDiv.dataset.messageId, username, message || data.file_location));
+    replySvg.addEventListener("click", () => handleReply(messageDiv.dataset.messageId, username, message || file_location));
 
     let profilePicSrc = "/static/default-avatar.png";
     if (senderId) {
@@ -570,61 +595,110 @@ document.addEventListener("DOMContentLoaded", async function () {
     let userId = getCookie("id");
     if (!userId) {
         console.log("User ID not found in cookies, fetching from server...");
-        await fetchAndSaveUsername(); // Wait for cookies to be set
-        userId = getCookie("id"); // Re-fetch the userId after setting cookies
+        await fetchAndSaveUsername();
+        userId = getCookie("id");
     }
 
     const friendsWrapper = document.getElementById("friendsWrapper");
     const friendRequestsList = document.getElementById("friendRequestsList");
 
-    // Fetch messages for the current conversation
-    if (friendId) {
-        fetch(`/messages?friend_id=${friendId}`)
-            .then(response => response.json())
-            .then(messages => {
-                messages.forEach(msg => {
-                    const messageDiv = document.createElement("div");
-                    messageDiv.classList.add("message", msg.username === getCookie("username") ? "user-message" : "bot-message");
-                    messageDiv.dataset.messageId = msg.id;
-                    const messageContent = document.createElement("div");
-                    messageContent.classList.add("message-content");
+    // Variables for lazy loading messages
+    let messageOffset = 0;
+    const messageLimit = 50;
+    let isLoadingMessages = false;
+    let allMessagesLoaded = false;
 
-                    if (msg.file_location) {
-                        messageContent.innerHTML += `<a href="/uploads/${msg.file_location}" target="_blank">${msg.file_location}</a>`;
+    // Fetch and render messages for the current conversation
+    async function loadMessages(offset = 0, append = false) {
+        if (isLoadingMessages || allMessagesLoaded) return;
+        isLoadingMessages = true;
+
+        try {
+            const response = await fetch(`/messages?friend_id=${friendId}&limit=${messageLimit}&offset=${offset}`);
+            const messages = await response.json();
+
+            if (messages.length < messageLimit) {
+                allMessagesLoaded = true; // No more messages to load
+            }
+
+            messages.forEach(async (msg) => {
+                const messageDiv = document.createElement("div");
+                messageDiv.classList.add("message", msg.username === getCookie("username") ? "user-message" : "bot-message");
+                messageDiv.dataset.messageId = msg.id;
+                const messageContent = document.createElement("div");
+                messageContent.classList.add("message-content");
+
+                if (msg.file_location) {
+                    messageContent.innerHTML += `<a href="/uploads/${msg.file_location}" target="_blank">${msg.file_location}</a>`;
+                }
+                if (msg.message) {
+                    messageContent.innerHTML += formatMessage(msg.message);
+                }
+
+                // Add timestamp
+                const timestampDiv = document.createElement("div");
+                timestampDiv.classList.add("message-timestamp");
+                timestampDiv.textContent = new Date(msg.timestamp).toLocaleString(); // Format timestamp
+                messageContent.appendChild(timestampDiv);
+
+                const replySvg = document.createElement("img");
+                replySvg.classList.add("reply-btn");
+                replySvg.src = "/static/reply.svg";
+                replySvg.alt = "Reply";
+                replySvg.addEventListener("click", () => handleReply(messageDiv.dataset.messageId, msg.username, msg.message || msg.file_location));
+
+                let profilePicSrc = "/static/default-avatar.png";
+                const profileId = msg.username === getCookie("username") ? userId : friendId;
+                try {
+                    const response = await fetch(`/profile?id=${profileId}`);
+                    const profileData = await response.json();
+                    if (profileData[0]?.image1) {
+                        profilePicSrc = `data:image/jpeg;base64,${profileData[0].image1}`;
                     }
-                    if (msg.message) {
-                        messageContent.innerHTML += formatMessage(msg.message);
-                    }
+                } catch (error) {
+                    console.error("Error fetching profile picture:", error);
+                }
 
-                    const replySvg = document.createElement("img");
-                    replySvg.classList.add("reply-btn");
-                    replySvg.src = "/static/reply.svg";
-                    replySvg.alt = "Reply";
-                    replySvg.addEventListener("click", () => handleReply(messageDiv.dataset.messageId, msg.username, msg.message || msg.file_location));
+                const profilePic = document.createElement("img");
+                profilePic.classList.add("message-pfp");
+                profilePic.src = profilePicSrc;
+                profilePic.alt = "Profile Picture";
 
-                    let profilePicSrc = "/static/default-avatar.png";
-                    fetch(`/profile?id=${friendId}`)
-                        .then(response => response.json())
-                        .then(profileData => {
-                            if (profileData[0]?.image1) {
-                                profilePicSrc = `data:image/jpeg;base64,${profileData[0].image1}`;
-                            }
-                            const profilePic = document.createElement("img");
-                            profilePic.classList.add("message-pfp");
-                            profilePic.src = profilePicSrc;
-                            profilePic.alt = "Profile Picture";
+                messageDiv.appendChild(msg.username === getCookie("username") ? replySvg : profilePic);
+                messageDiv.appendChild(messageContent);
+                messageDiv.appendChild(msg.username === getCookie("username") ? profilePic : replySvg);
 
-                            messageDiv.appendChild(msg.username === getCookie("username") ? replySvg : profilePic);
-                            messageDiv.appendChild(messageContent);
-                            messageDiv.appendChild(msg.username === getCookie("username") ? profilePic : replySvg);
-                            messagesContainer.appendChild(messageDiv);
-                            scrollToBottom();
-                            renderLatex();
-                        });
-                });
-            })
-            .catch(error => console.error("Error fetching messages:", error));
+                if (append) {
+                    messagesContainer.insertBefore(messageDiv, messagesContainer.firstChild);
+                } else {
+                    messagesContainer.appendChild(messageDiv);
+                }
+            });
+
+            if (!append) {
+                scrollToBottom();
+            }
+            renderLatex();
+            messageOffset += messages.length;
+
+        } catch (error) {
+            console.error("Error fetching messages:", error);
+        } finally {
+            isLoadingMessages = false;
+        }
     }
+
+    // Initial load of messages
+    if (friendId) {
+        await loadMessages();
+    }
+
+    // Lazy load messages on scroll
+    messagesContainer.addEventListener("scroll", () => {
+        if (messagesContainer.scrollTop === 0 && !isLoadingMessages && !allMessagesLoaded) {
+            loadMessages(messageOffset, true);
+        }
+    });
 
     // Fetch friends and incoming requests
     if (!userId) {
@@ -730,7 +804,6 @@ document.addEventListener("DOMContentLoaded", async function () {
                             friendRequestsList.appendChild(requestElement);
                             console.log("Appended request element for ID:", requestId);
 
-                            // Debug: Verify elements exist before adding event listeners
                             const acceptButton = document.getElementById(`accept_${requestId}`);
                             const denyButton = document.getElementById(`deny_${requestId}`);
                             console.log(`Accept button for ID ${requestId}:`, acceptButton);

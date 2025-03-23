@@ -1,37 +1,63 @@
-import os,sqlite3
-
+import os
+import sqlite3
 
 dirname = os.path.dirname(__file__)
 db_path = os.path.join(dirname, "db.db")
-if not os.path.exists(db_path):
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    conn.execute("PRAGMA journal_mode=WAL;")
-    cursor.execute('''
-        CREATE TABLE users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT NOT NULL UNIQUE,
-            password TEXT NOT NULL,
-            image1 BLOB,
-            image2 BLOB
-        )
-    ''')
-    cursor.execute('''
-        CREATE TABLE messages (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT NOT NULL,
-    message TEXT NOT NULL,
-    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-    file_location TEXT,
-    recipient_id INTEGER
-)
-    ''')
-    cursor.execute('''
-            CREATE TABLE friends (
-                user_id INT NOT NULL,
-                friends TEXT,
-                incoming_request TEXT
-            )
-        ''')
-    conn.commit()
-    conn.close()
+
+# Connect to the database (create if it doesn't exist)
+conn = sqlite3.connect(db_path)
+cursor = conn.cursor()
+
+# Enable WAL mode for better concurrency
+cursor.execute("PRAGMA journal_mode=WAL;")
+cursor.execute("PRAGMA foreign_keys=ON;")  # Enable foreign key constraints
+
+# Create users table
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL UNIQUE,
+        password TEXT NOT NULL,
+        image1 BLOB,
+        image2 BLOB
+    )
+''')
+
+# Create messages table
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT,
+        user_id INTEGER,
+        friend_id INTEGER,
+        message TEXT,
+        file_location TEXT,
+        reply_to INTEGER,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        FOREIGN KEY (friend_id) REFERENCES users(id),
+        FOREIGN KEY (reply_to) REFERENCES messages(id)
+    )
+''')
+
+# Create friends table
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS friends (
+        user_id INTEGER PRIMARY KEY,
+        friends TEXT,
+        incoming_request TEXT,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+''')
+
+# Migration: Add timestamp column if it doesn't exist (for existing databases)
+try:
+    cursor.execute('ALTER TABLE messages ADD COLUMN timestamp DATETIME DEFAULT CURRENT_TIMESTAMP')
+except sqlite3.OperationalError:
+    # Column already exists, no action needed
+    pass
+
+conn.commit()
+conn.close()
+
+print(f"Database initialized at {db_path}")
