@@ -556,6 +556,11 @@ document.addEventListener("DOMContentLoaded", function () {
                                     <img class="pfp" src="data:image/jpeg;base64,${friendData.image1}" alt="hehe">
                                     ${friendData.username}
                                 `;
+
+                                friendElement.addEventListener("click", () => {
+                                    window.location.href = `/?friend_id=${friend}`;
+                                });
+
                                 friendsWrapper.appendChild(friendElement);
                             }
                         })
@@ -645,15 +650,6 @@ document.addEventListener("DOMContentLoaded", function () {
             .catch(error => console.error(`Error with ${url}:`, error));
     }
 });
-
-
-
-
-
-
-
-
-
 
 function handleReply(messageId, username, messageText) {
     replyToMessageId = messageId;

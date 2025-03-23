@@ -27,7 +27,31 @@ def generate_random_string(length=10):
     chars = string.ascii_letters + string.digits  # Alphabets and numbers
     return ''.join(random.choices(chars, k=length))
 
-
+def get_user_friends(user_id):
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute("SELECT friends FROM friends WHERE user_id = ?", (user_id,))
+    friends = cursor.fetchone()
+    if friends:
+        friends=friends[0]
+    if friends:
+        friends = friends[0]
+        friends = friends.split(',')
+        friends_data=[]
+        for friend in friends:
+            cursor.execute("SELECT username,image1,image2 FROM users WHERE id = ?", (friend,))
+            row = cursor.fetchone()
+            print(row[0])
+            if row:
+                friends_data.append({"username":row[0],
+                                     "id":friend,
+                                     "pfp": row[1],
+                                     "banner": row[2]
+                                     })
+        conn.close()
+        return friends_data
+    else:
+        return "No friends"
 
 @socketio.on("connect")
 def handle_connect():
@@ -240,18 +264,32 @@ def profile():
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM users WHERE id = ?", (id,))
     row = cursor.fetchone()
+    print(f"Profile row: {row}")
     if row:
         # Handle None values for images
         encoded_image1 = base64.b64encode(row[3]).decode('utf-8') if row[3] else ""
         encoded_image2 = base64.b64encode(row[4]).decode('utf-8') if row[4] else ""
-        formatted_messages = [{"username": row[1], "image1": encoded_image1, "image2": encoded_image2}]
+        # Map database format to MIME type format
+        image1_format = row[5] if len(row) > 5 else "png"  # Default to PNG if not set
+        image2_format = row[6] if len(row) > 6 else "png"
+        # Ensure format matches MIME type (e.g., 'jpeg' -> 'jpeg', 'png' -> 'png', 'gif' -> 'gif')
+        image1_format_mime = image1_format if image1_format in ['png', 'gif', 'jpeg'] else 'png'
+        image2_format_mime = image2_format if image2_format in ['png', 'gif', 'jpeg'] else 'png'
+        print(f"Encoded image1 length: {len(encoded_image1)}, format: {image1_format_mime}")
+        print(f"Encoded image2 length: {len(encoded_image2)}, format: {image2_format_mime}")
+        formatted_messages = [{
+            "username": row[1],
+            "image1": encoded_image1,
+            "image2": encoded_image2,
+            "image1_format": image1_format_mime,
+            "image2_format": image2_format_mime
+        }]
         conn.close()
         return jsonify(formatted_messages)
     else:
         conn.close()
         print(f"No user found for ID: {id}")
         return jsonify({"error": "ID doesn't exist or not found"}), 404
-
 
 @app.route('/logout')
 def logout():
@@ -298,30 +336,70 @@ def get_last_messages():
 
 @app.route('/submit', methods=['POST'])
 def submit():
+    print("Received /submit request")
+    if 'CONTENT_LENGTH' in request.environ:
+        print(f"Request content length: {int(request.environ['CONTENT_LENGTH']) / 1024 / 1024} MB")
     username = request.form['username']
     password = request.form['password']
-    # Store files as BLOBs in database for image1 and image2
-    image1_blob = request.files['image1'].read() if 'image1' in request.files else None
-    image2_blob = request.files['image2'].read() if 'image2' in request.files else None
+    # Get the base64-encoded cropped images
+    image1_base64 = request.form.get('image1-base64')
+    image2_base64 = request.form.get('image2-base64')
+    image1_format = request.form.get('image1-format', 'png')  # Default to PNG if not specified
+    image2_format = request.form.get('image2-format', 'png')
+
+    print(f"Total request form data size: {sum(len(k) + len(v) for k, v in request.form.items()) / 1024 / 1024} MB")
+    if image1_base64:
+        print(f"Image1 base64 size: {len(image1_base64) / 1024 / 1024} MB")
+        print(f"Image1 format: {image1_format}")
+    if image2_base64:
+        print(f"Image2 base64 size: {len(image2_base64) / 1024 / 1024} MB")
+        print(f"Image2 format: {image2_format}")
+
+    # Decode base64 strings into binary data for BLOB storage
+    image1_blob = None
+    image2_blob = None
+    if image1_base64:
+        try:
+            image1_blob = base64.b64decode(image1_base64)
+        except Exception as e:
+            print(f"Error decoding image1 base64: {e}")
+            flash("Error processing profile picture.", "error")
+            return redirect(url_for('signup'))
+    if image2_base64:
+        try:
+            image2_blob = base64.b64decode(image2_base64)
+        except Exception as e:
+            print(f"Error decoding image2 base64: {e}")
+            flash("Error processing banner image.", "error")
+            return redirect(url_for('signup'))
 
     # Check if user already exists
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path)  # Use db_path for consistency
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM users WHERE username = ? ", (username,))
+    cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
     existing_user = cursor.fetchone()
 
     if existing_user:
-        flash("User already exists. Please log in.","error")
+        flash("User already exists. Please log in.", "error")
+        conn.close()
         return redirect('/login')
     else:
         # If user doesn't exist, register them
         cursor.execute("INSERT INTO users (username, password, image1, image2) VALUES (?, ?, ?, ?)",
-                           (username, password, sqlite3.Binary(image1_blob) if image1_blob else None, sqlite3.Binary(image2_blob) if image2_blob else None))
+                       (username, password, sqlite3.Binary(image1_blob) if image1_blob else None, sqlite3.Binary(image2_blob) if image2_blob else None))
+        # Get the ID of the newly inserted user
+        cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
+        user_id = cursor.fetchone()[0]
+        # Initialize the friends table entry for the new user
+        cursor.execute("INSERT INTO friends (user_id, friends, incoming_request) VALUES (?, ?, ?)",
+                       (user_id, None, None))
         conn.commit()
+        # Set user ID in session
+        session['id'] = user_id
         conn.close()
 
     session['username'] = username  # Save user in session
-    flash("Login successful!", "success")
+    flash("Sign-up successful!", "success")
     return redirect(url_for('chatroom'))
 
 @app.route('/login', methods=['POST'])
@@ -333,7 +411,11 @@ def login_post():
     cursor.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, password))
     existing_user = cursor.fetchone()
     if existing_user:
-        session['username'] = username
+        cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
+        row = cursor.fetchone()
+        user_id = row[0]
+        session['username'] = username  # Save user in session
+        session['id'] = user_id
         return redirect("/")
     else:
         flash("Pls Signup!!","error")
@@ -341,14 +423,28 @@ def login_post():
 @app.route('/signup')
 def signup():
     return render_template('signup.html')
+
 @app.route('/')
 def chatroom():
+    friend_id = request.args.get('friend_id')
     # Check if user is logged in
     if 'username' not in session:
         flash("Please log in to access the chatroom.","error")
         return redirect('/login')
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute("SELECT image1,image2 FROM users WHERE id = ?", (session['id'],))
+    row = cursor.fetchone()
+    user_data ={
+        "username":session['username'],
+        "id":session['id'],
+        "pfp":row[0],
+        "banner":row[1]
+    }
+    friends_data = get_user_friends(session["id"])
+    print(friends_data)
+    return render_template('chatroom.html', user_data=user_data, friends_data=friends_data,friend_id=friend_id)
 
-    return render_template('chatroom.html', username=session['username'])
 
 
 @app.route('/get_username', methods=['GET'])

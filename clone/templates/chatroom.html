@@ -1,10 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
+{% set friend_id = friend_id | string %}  {# Convert friend_id to a string #}
+{% set friend = friends_data | selectattr("id", "equalto", friend_id) | first %}
+{% set friend_name = friend.username if friend else "Unknown" %}
+{% set friend_pfp = friend.pfp if friend else "Unknown" %}
+
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Discord</title>
+    <title>Discord || {{friend_name}}</title>
     <link rel="stylesheet" href="/static/chatroom.css">
     <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"
         integrity="sha384-mkQ3/7FUtcGyoppY6bz/PORYoGqOl7/aSUMn2ymDOJcapfS6PHqxhRTMh1RR0Q6+"
@@ -40,8 +45,10 @@
 
             <div class="top">
                 <span class="name"><img class="pfp"
-                        src="https://cdn.discordapp.com/avatars/795495556494393375/3c479a883b31eb44fd5c75212ab5c9b1.webp?size=80"
-                        alt="">Friend's Name</span>
+                        src="data:image/jpeg;base64,{{ friend_pfp }}"
+                        alt="">{{ friend_name }}
+
+                </span>
 
                 <div class="icons">
                     <img class="add_person icon_top" src="/static/add_person.svg" alt="" id="openPopup"
