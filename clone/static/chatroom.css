@@ -667,3 +667,67 @@ span.unread::after {
     margin-left: 5px !important;
     vertical-align: middle !important;
 }
+
+/* Container to hold sidebar and chat */
+.main {
+    display: flex;
+    flex-direction: row;
+}
+
+/* Base sidebar styles */
+.sidebar {
+    height: 100dvh;
+    width: 20vw;
+    background-color: #2b2d31;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+/* On screens smaller than 1320px */
+@media (max-width: 1220px) {
+    .chat {
+        width: 100% !important; /* Full width of the device screen */
+        margin-left: 0 !important; /* Remove any left margin to ensure full width */
+    }
+
+    .sidebar {
+       width:900px;
+        margin-left: -900px !important; /* Move sidebar off-screen to the left */
+        transition: margin-left 0.3s ease-in-out !important; /* Smooth animation */
+        z-index:1000;
+
+    }
+
+    .sidebar.open {
+        margin-left: 0 !important; /* Slide sidebar into view at the left edge */
+
+    }
+
+    .message{
+    margin:0px;
+    padding:5px;
+    }
+}
+
+/* Overlay for the background when sidebar is open */
+.sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black */
+    z-index: 999;
+    display: none; /* Hidden by default */
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out; /* Fade animation */
+}
+
+/* Show overlay when sidebar is open */
+.sidebar-overlay.active {
+    display: block;
+    opacity: 1;
+    z-index:1;
+}

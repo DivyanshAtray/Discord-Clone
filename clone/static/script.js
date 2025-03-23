@@ -1399,3 +1399,111 @@ messagesContainer.addEventListener("click", (e) => {
         }
     }
 });
+
+
+
+document.addEventListener("DOMContentLoaded", () => {
+    const sidebar = document.querySelector(".sidebar");
+    if (!sidebar) {
+        console.error("Sidebar element not found! Please ensure the element with class 'sidebar' exists in the DOM.");
+        return;
+    }
+
+    const chat = document.querySelector(".chat");
+    if (!chat) {
+        console.error("Chat element not found! Please ensure the element with class 'chat' exists in the DOM.");
+        return;
+    }
+
+    const sidebarOverlay = document.createElement("div");
+    sidebarOverlay.classList.add("sidebar-overlay");
+    document.body.appendChild(sidebarOverlay);
+
+    // Function to check if the screen width is less than 1320px
+    function isMobileView() {
+        const isMobile = window.innerWidth < 1220;
+        console.log(`Is mobile view? ${isMobile} (Window width: ${window.innerWidth}px)`);
+        return isMobile;
+    }
+
+    // Function to open the sidebar
+    function openSidebar() {
+        console.log("Opening sidebar");
+        sidebar.classList.add("open");
+        sidebarOverlay.classList.add("active");
+    }
+
+    // Function to close the sidebar
+    function closeSidebar() {
+        console.log("Closing sidebar");
+        sidebar.classList.remove("open");
+        sidebarOverlay.classList.remove("active");
+    }
+
+    // Function to initialize swipe detection using native touch events
+    function initializeSwipeDetection() {
+        console.log("Initializing native swipe detection on .chat element...");
+        let touchStartX = 0;
+        let touchEndX = 0;
+        const swipeThreshold = 30; // Reduced for sensitivity
+
+        // Debug: Log all touchstart events on the .chat element
+        chat.addEventListener("touchstart", (e) => {
+            console.log("Chat touchstart event detected", e);
+            console.log("Touch target:", e.target);
+            touchStartX = e.changedTouches[0].screenX;
+            console.log(`Native touchstart at X: ${touchStartX}`);
+            e.stopPropagation();
+        }, { passive: false });
+
+        // Touch end event
+        chat.addEventListener("touchend", (e) => {
+            console.log("Chat touchend event detected", e);
+            touchEndX = e.changedTouches[0].screenX;
+            console.log(`Native touchend at X: ${touchEndX}`);
+            const swipeDistance = touchEndX - touchStartX;
+            console.log(`Native swipe distance: ${swipeDistance}`);
+
+            if (swipeDistance > swipeThreshold && !sidebar.classList.contains("open")) {
+                console.log("Native swipe left to right detected - opening sidebar");
+                openSidebar();
+            } else if (swipeDistance < -swipeThreshold && sidebar.classList.contains("open")) {
+                console.log("Native swipe right to left detected - closing sidebar");
+                closeSidebar();
+            } else {
+                console.log("Native swipe distance too small or sidebar already in desired state");
+            }
+            e.stopPropagation();
+        }, { passive: false });
+
+        // Close sidebar when clicking on the overlay
+        sidebarOverlay.addEventListener("click", (e) => {
+            console.log("Overlay clicked - closing sidebar");
+            closeSidebar();
+            e.stopPropagation();
+        });
+
+        // Prevent closing the sidebar when clicking inside it
+        sidebar.addEventListener("click", (e) => {
+            console.log("Clicked inside sidebar - preventing close");
+            e.stopPropagation();
+        });
+    }
+
+    // Only enable swipe behavior on mobile view
+    if (isMobileView()) {
+        initializeSwipeDetection();
+    }
+
+    // Update sidebar visibility on window resize
+    window.addEventListener("resize", () => {
+        if (!isMobileView()) {
+            console.log("Window resized to larger screen - resetting sidebar state");
+            sidebar.classList.remove("open");
+            sidebarOverlay.classList.remove("active");
+        } else {
+            console.log("Window resized to mobile view - enabling swipe detection");
+            initializeSwipeDetection();
+        }
+    });
+});
