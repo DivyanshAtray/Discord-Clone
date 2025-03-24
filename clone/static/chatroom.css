@@ -642,3 +642,18 @@ textarea{
     margin-top: 5px;
     text-align: right;
 }
+
+.date-separator {
+    text-align: center;
+    margin: 15px 0;
+    padding: 8px 0;
+    color: #a6a7a9;
+    font-family: 'Arial', sans-serif; /* Decent font */
+    font-size: small;
+    font-weight: 500;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+

@@ -339,7 +339,6 @@ async function sendMessage() {
     // Local rendering for your message
     const messageDiv = document.createElement("div");
     messageDiv.classList.add("message", "user-message");
-    messageDiv.dataset.messageId = Date.now();
     const messageContent = document.createElement("div");
     messageContent.classList.add("message-content");
 
@@ -359,11 +358,9 @@ async function sendMessage() {
         messageContent.innerHTML += formatMessage(messageText);
     }
 
-    // Add timestamp
+    // Add timestamp (we'll set this after getting the server response)
     const timestampDiv = document.createElement("div");
     timestampDiv.classList.add("message-timestamp");
-    const timestamp = new Date().toLocaleString();
-    timestampDiv.textContent = timestamp;
     messageContent.appendChild(timestampDiv);
 
     const replySvg = document.createElement("img");
@@ -391,9 +388,6 @@ async function sendMessage() {
     messageDiv.appendChild(replySvg);
     messageDiv.appendChild(messageContent);
     messageDiv.appendChild(profilePic);
-    messagesContainer.appendChild(messageDiv);
-    scrollToBottom();
-    renderLatex();
 
     // Send to server
     const formData = new FormData();
@@ -409,6 +403,7 @@ async function sendMessage() {
     formData.append("replyTo", replyToMessageId || "");
     formData.append("friend_id", friendId);
 
+    let messageId, serverTimestamp;
     try {
         console.log("Sending POST to /send_message...");
         const response = await fetch("/send_message", {
@@ -418,14 +413,125 @@ async function sendMessage() {
         const data = await response.json();
 
         if (data.status === "success") {
+            messageId = data.message_id;
+            serverTimestamp = data.timestamp; // Use the server-assigned timestamp
+            messageDiv.dataset.messageId = messageId; // Set the server-assigned ID
+
+            // Set the timestamp for display
+            if (serverTimestamp) {
+                const date = new Date(serverTimestamp); // Parse as UTC
+                timestampDiv.textContent = date.toLocaleTimeString(); // Convert to local timezone
+            } else {
+                timestampDiv.textContent = new Date().toLocaleTimeString(); // Fallback
+            }
+
+            // Insert the message in the correct position based on message ID
+            const currentDate = new Date(serverTimestamp || new Date());
+            const currentDateString = currentDate.toLocaleDateString();
+            let inserted = false;
+            let lastDate = null;
+            let lastDateSeparator = null;
+            const children = Array.from(messagesContainer.children);
+
+            // Check if a date separator for the current day already exists
+            let existingSeparator = null;
+            for (const child of children) {
+                if (child.classList.contains("date-separator") && child.textContent === "Today") {
+                    existingSeparator = child;
+                    break;
+                }
+            }
+
+            for (let i = 0; i < children.length; i++) {
+                const child = children[i];
+                if (child.classList.contains("date-separator")) {
+                    lastDate = child.textContent;
+                    lastDateSeparator = child;
+                    continue;
+                }
+                if (child.classList.contains("message")) {
+                    const childMessageId = parseInt(child.dataset.messageId);
+                    const childTimestamp = new Date(child.querySelector(".message-timestamp").textContent);
+                    const childDateString = childTimestamp.toLocaleDateString();
+
+                    // Compare message IDs
+                    if (messageId < childMessageId) {
+                        // If we're inserting before a message, check if we need a date separator
+                        if (!existingSeparator && lastDate !== currentDateString) {
+                            const dateSeparator = document.createElement("div");
+                            dateSeparator.classList.add("date-separator");
+
+                            const today = new Date();
+                            const yesterday = new Date(today);
+                            yesterday.setDate(today.getDate() - 1);
+
+                            const todayString = today.toLocaleDateString();
+                            const yesterdayString = yesterday.toLocaleDateString();
+
+                            if (currentDateString === todayString) {
+                                dateSeparator.textContent = "Today";
+                            } else if (currentDateString === yesterdayString) {
+                                dateSeparator.textContent = "Yesterday";
+                            } else {
+                                dateSeparator.textContent = currentDate.toLocaleDateString(undefined, {
+                                    year: "numeric",
+                                    month: "long",
+                                    day: "numeric"
+                                });
+                            }
+
+                            messagesContainer.insertBefore(dateSeparator, child);
+                            i++; // Skip the newly inserted separator
+                        }
+                        messagesContainer.insertBefore(messageDiv, child);
+                        inserted = true;
+                        break;
+                    }
+                }
+            }
+
+            // If the message wasn't inserted (e.g., it's the newest), append it
+            if (!inserted) {
+                if (!existingSeparator && lastDate !== currentDateString) {
+                    const dateSeparator = document.createElement("div");
+                    dateSeparator.classList.add("date-separator");
+
+                    const today = new Date();
+                    const yesterday = new Date(today);
+                    yesterday.setDate(today.getDate() - 1);
+
+                    const todayString = today.toLocaleDateString();
+                    const yesterdayString = yesterday.toLocaleDateString();
+
+                    if (currentDateString === todayString) {
+                        dateSeparator.textContent = "Today";
+                    } else if (currentDateString === yesterdayString) {
+                        dateSeparator.textContent = "Yesterday";
+                    } else {
+                        dateSeparator.textContent = currentDate.toLocaleDateString(undefined, {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric"
+                        });
+                    }
+
+                    messagesContainer.appendChild(dateSeparator);
+                }
+                messagesContainer.appendChild(messageDiv);
+            }
+
+            scrollToBottom();
+            renderLatex();
+
             console.log("POST successful, emitting socket message:", {
                 message: messageText,
                 username: USER,
                 userId: userId,
                 friendId: friendId,
                 replyTo: replyToMessageId,
-                timestamp: timestamp,
-                file_location: selectedFile ? selectedFile.name : null
+                timestamp: serverTimestamp || new Date().toISOString(),
+                file_location: selectedFile ? selectedFile.name : null,
+                message_id: messageId
             });
             socket.emit("send_message", {
                 message: messageText,
@@ -433,8 +539,9 @@ async function sendMessage() {
                 userId: userId,
                 friendId: friendId,
                 replyTo: replyToMessageId,
-                timestamp: timestamp,
-                file_location: selectedFile ? selectedFile.name : null
+                timestamp: serverTimestamp || new Date().toISOString(),
+                file_location: selectedFile ? selectedFile.name : null,
+                message_id: messageId
             });
         } else {
             console.error("Server rejected message:", data);
@@ -459,11 +566,12 @@ socket.on("broadcast_message", async (data) => {
     const senderId = data.userId;
     const recipientId = data.friendId;
     const replyTo = data.replyTo;
-    const timestamp = data.timestamp || new Date().toLocaleString();
+    const timestamp = data.timestamp || new Date().toISOString();
     const file_location = data.file_location;
+    const messageId = data.message_id;
 
     // Skip if no valid data
-    if (!username || (!message && !file_location)) {
+    if (!username || (!message && !file_location) || !messageId) {
         console.error("Invalid broadcast data:", data);
         return;
     }
@@ -486,7 +594,7 @@ socket.on("broadcast_message", async (data) => {
 
     const messageDiv = document.createElement("div");
     messageDiv.classList.add("message", "bot-message");
-    messageDiv.dataset.messageId = Date.now();
+    messageDiv.dataset.messageId = messageId;
     const messageContent = document.createElement("div");
     messageContent.classList.add("message-content");
 
@@ -507,7 +615,7 @@ socket.on("broadcast_message", async (data) => {
 
     const timestampDiv = document.createElement("div");
     timestampDiv.classList.add("message-timestamp");
-    timestampDiv.textContent = timestamp;
+    timestampDiv.textContent = new Date(timestamp).toLocaleTimeString(); // Parse as UTC and convert to local
     messageContent.appendChild(timestampDiv);
 
     const replySvg = document.createElement("img");
@@ -537,7 +645,102 @@ socket.on("broadcast_message", async (data) => {
     messageDiv.appendChild(profilePic);
     messageDiv.appendChild(messageContent);
     messageDiv.appendChild(replySvg);
-    messagesContainer.appendChild(messageDiv);
+
+    // Insert the message in the correct position based on message ID
+    const currentDate = new Date(timestamp);
+    const currentDateString = currentDate.toLocaleDateString();
+    let inserted = false;
+    let lastDate = null;
+    let lastDateSeparator = null;
+    const children = Array.from(messagesContainer.children);
+
+    // Check if a date separator for the current day already exists
+    let existingSeparator = null;
+    for (const child of children) {
+        if (child.classList.contains("date-separator") && child.textContent === "Today") {
+            existingSeparator = child;
+            break;
+        }
+    }
+
+    for (let i = 0; i < children.length; i++) {
+        const child = children[i];
+        if (child.classList.contains("date-separator")) {
+            lastDate = child.textContent;
+            lastDateSeparator = child;
+            continue;
+        }
+        if (child.classList.contains("message")) {
+            const childMessageId = parseInt(child.dataset.messageId);
+            const childTimestamp = new Date(child.querySelector(".message-timestamp").textContent);
+            const childDateString = childTimestamp.toLocaleDateString();
+
+            // Compare message IDs
+            if (messageId < childMessageId) {
+                // If we're inserting before a message, check if we need a date separator
+                if (!existingSeparator && lastDate !== currentDateString) {
+                    const dateSeparator = document.createElement("div");
+                    dateSeparator.classList.add("date-separator");
+
+                    const today = new Date();
+                    const yesterday = new Date(today);
+                    yesterday.setDate(today.getDate() - 1);
+
+                    const todayString = today.toLocaleDateString();
+                    const yesterdayString = yesterday.toLocaleDateString();
+
+                    if (currentDateString === todayString) {
+                        dateSeparator.textContent = "Today";
+                    } else if (currentDateString === yesterdayString) {
+                        dateSeparator.textContent = "Yesterday";
+                    } else {
+                        dateSeparator.textContent = currentDate.toLocaleDateString(undefined, {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric"
+                        });
+                    }
+
+                    messagesContainer.insertBefore(dateSeparator, child);
+                    i++; // Skip the newly inserted separator
+                }
+                messagesContainer.insertBefore(messageDiv, child);
+                inserted = true;
+                break;
+            }
+        }
+    }
+
+    // If the message wasn't inserted (e.g., it's the newest), append it
+    if (!inserted) {
+        if (!existingSeparator && lastDate !== currentDateString) {
+            const dateSeparator = document.createElement("div");
+            dateSeparator.classList.add("date-separator");
+
+            const today = new Date();
+            const yesterday = new Date(today);
+            yesterday.setDate(today.getDate() - 1);
+
+            const todayString = today.toLocaleDateString();
+            const yesterdayString = yesterday.toLocaleDateString();
+
+            if (currentDateString === todayString) {
+                dateSeparator.textContent = "Today";
+            } else if (currentDateString === yesterdayString) {
+                dateSeparator.textContent = "Yesterday";
+            } else {
+                dateSeparator.textContent = currentDate.toLocaleDateString(undefined, {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric"
+                });
+            }
+
+            messagesContainer.appendChild(dateSeparator);
+        }
+        messagesContainer.appendChild(messageDiv);
+    }
+
     scrollToBottom();
     renderLatex();
 });
@@ -610,83 +813,137 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     // Fetch and render messages for the current conversation
     async function loadMessages(offset = 0, append = false) {
-        if (isLoadingMessages || allMessagesLoaded) return;
-        isLoadingMessages = true;
+    if (isLoadingMessages || allMessagesLoaded) return;
+    isLoadingMessages = true;
 
-        try {
-            const response = await fetch(`/messages?friend_id=${friendId}&limit=${messageLimit}&offset=${offset}`);
-            const messages = await response.json();
+    try {
+        const response = await fetch(`/messages?friend_id=${friendId}&limit=${messageLimit}&offset=${offset}`);
+        const messages = await response.json();
 
-            if (messages.length < messageLimit) {
-                allMessagesLoaded = true; // No more messages to load
+        if (messages.length < messageLimit) {
+            allMessagesLoaded = true; // No more messages to load
+        }
+
+        let lastDate = null; // Track the date of the last message to detect date changes
+        const existingSeparators = new Set(); // Track which date separators already exist
+
+        // If appending (lazy loading), check existing separators
+        if (append) {
+            const children = Array.from(messagesContainer.children);
+            for (const child of children) {
+                if (child.classList.contains("date-separator")) {
+                    existingSeparators.add(child.textContent);
+                }
+            }
+        }
+
+        for (const msg of messages) {
+            const messageDate = new Date(msg.timestamp);
+            const messageDateString = messageDate.toLocaleDateString(); // e.g., "3/23/2025"
+
+            // Format the date (e.g., "Today", "Yesterday", or "March 23, 2025")
+            const today = new Date();
+            const yesterday = new Date(today);
+            yesterday.setDate(today.getDate() - 1);
+
+            const todayString = today.toLocaleDateString();
+            const yesterdayString = yesterday.toLocaleDateString();
+
+            let dateLabel;
+            if (messageDateString === todayString) {
+                dateLabel = "Today";
+            } else if (messageDateString === yesterdayString) {
+                dateLabel = "Yesterday";
+            } else {
+                dateLabel = messageDate.toLocaleDateString(undefined, {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric"
+                }); // e.g., "March 23, 2025"
             }
 
-            messages.forEach(async (msg) => {
-                const messageDiv = document.createElement("div");
-                messageDiv.classList.add("message", msg.username === getCookie("username") ? "user-message" : "bot-message");
-                messageDiv.dataset.messageId = msg.id;
-                const messageContent = document.createElement("div");
-                messageContent.classList.add("message-content");
-
-                if (msg.file_location) {
-                    messageContent.innerHTML += `<a href="/uploads/${msg.file_location}" target="_blank">${msg.file_location}</a>`;
-                }
-                if (msg.message) {
-                    messageContent.innerHTML += formatMessage(msg.message);
-                }
-
-                // Add timestamp
-                const timestampDiv = document.createElement("div");
-                timestampDiv.classList.add("message-timestamp");
-                timestampDiv.textContent = new Date(msg.timestamp).toLocaleString(); // Format timestamp
-                messageContent.appendChild(timestampDiv);
-
-                const replySvg = document.createElement("img");
-                replySvg.classList.add("reply-btn");
-                replySvg.src = "/static/reply.svg";
-                replySvg.alt = "Reply";
-                replySvg.addEventListener("click", () => handleReply(messageDiv.dataset.messageId, msg.username, msg.message || msg.file_location));
-
-                let profilePicSrc = "/static/default-avatar.png";
-                const profileId = msg.username === getCookie("username") ? userId : friendId;
-                try {
-                    const response = await fetch(`/profile?id=${profileId}`);
-                    const profileData = await response.json();
-                    if (profileData[0]?.image1) {
-                        profilePicSrc = `data:image/jpeg;base64,${profileData[0].image1}`;
-                    }
-                } catch (error) {
-                    console.error("Error fetching profile picture:", error);
-                }
-
-                const profilePic = document.createElement("img");
-                profilePic.classList.add("message-pfp");
-                profilePic.src = profilePicSrc;
-                profilePic.alt = "Profile Picture";
-
-                messageDiv.appendChild(msg.username === getCookie("username") ? replySvg : profilePic);
-                messageDiv.appendChild(messageContent);
-                messageDiv.appendChild(msg.username === getCookie("username") ? profilePic : replySvg);
+            // Check if the date has changed and if a separator for this date already exists
+            if (lastDate !== messageDateString && !existingSeparators.has(dateLabel)) {
+                const dateSeparator = document.createElement("div");
+                dateSeparator.classList.add("date-separator");
+                dateSeparator.textContent = dateLabel;
 
                 if (append) {
-                    messagesContainer.insertBefore(messageDiv, messagesContainer.firstChild);
+                    messagesContainer.insertBefore(dateSeparator, messagesContainer.firstChild);
                 } else {
-                    messagesContainer.appendChild(messageDiv);
+                    messagesContainer.appendChild(dateSeparator);
                 }
-            });
 
-            if (!append) {
-                scrollToBottom();
+                existingSeparators.add(dateLabel);
+                lastDate = messageDateString;
             }
-            renderLatex();
-            messageOffset += messages.length;
 
-        } catch (error) {
-            console.error("Error fetching messages:", error);
-        } finally {
-            isLoadingMessages = false;
+            // Render the message
+            const messageDiv = document.createElement("div");
+            messageDiv.classList.add("message", msg.username === getCookie("username") ? "user-message" : "bot-message");
+            messageDiv.dataset.messageId = msg.id;
+            const messageContent = document.createElement("div");
+            messageContent.classList.add("message-content");
+
+            if (msg.file_location) {
+                messageContent.innerHTML += `<a href="/uploads/${msg.file_location}" target="_blank">${msg.file_location}</a>`;
+            }
+            if (msg.message) {
+                messageContent.innerHTML += formatMessage(msg.message);
+            }
+
+            // Add timestamp
+            const timestampDiv = document.createElement("div");
+            timestampDiv.classList.add("message-timestamp");
+            timestampDiv.textContent = new Date(msg.timestamp).toLocaleTimeString(); // Parse as UTC and convert to local
+            messageContent.appendChild(timestampDiv);
+
+            const replySvg = document.createElement("img");
+            replySvg.classList.add("reply-btn");
+            replySvg.src = "/static/reply.svg";
+            replySvg.alt = "Reply";
+            replySvg.addEventListener("click", () => handleReply(messageDiv.dataset.messageId, msg.username, msg.message || msg.file_location));
+
+            let profilePicSrc = "/static/default-avatar.png";
+            const profileId = msg.username === getCookie("username") ? userId : friendId;
+            try {
+                const response = await fetch(`/profile?id=${profileId}`);
+                const profileData = await response.json();
+                if (profileData[0]?.image1) {
+                    profilePicSrc = `data:image/jpeg;base64,${profileData[0].image1}`;
+                }
+            } catch (error) {
+                console.error("Error fetching profile picture:", error);
+            }
+
+            const profilePic = document.createElement("img");
+            profilePic.classList.add("message-pfp");
+            profilePic.src = profilePicSrc;
+            profilePic.alt = "Profile Picture";
+
+            messageDiv.appendChild(msg.username === getCookie("username") ? replySvg : profilePic);
+            messageDiv.appendChild(messageContent);
+            messageDiv.appendChild(msg.username === getCookie("username") ? profilePic : replySvg);
+
+            if (append) {
+                messagesContainer.insertBefore(messageDiv, messagesContainer.firstChild);
+            } else {
+                messagesContainer.appendChild(messageDiv);
+            }
         }
+
+        if (!append) {
+            scrollToBottom(); // Scroll to the bottom for the initial load
+        }
+        renderLatex();
+        messageOffset += messages.length;
+
+    } catch (error) {
+        console.error("Error fetching messages:", error);
+    } finally {
+        isLoadingMessages = false;
     }
+}
 
     // Initial load of messages
     if (friendId) {

@@ -90,6 +90,7 @@ def handle_send_message(data):
     reply_to = data.get("replyTo")
     timestamp = data.get("timestamp")
     file_location = data.get("file_location")
+    message_id = data.get("message_id")
 
     # Validate required fields
     if not friend_id:
@@ -100,6 +101,9 @@ def handle_send_message(data):
         return
     if not message and not file_location:
         print("No message or file_location provided in send_message event")
+        return
+    if not message_id:
+        print("No message_id provided in send_message event")
         return
 
     # Log the message for debugging
@@ -113,7 +117,8 @@ def handle_send_message(data):
         "friendId": friend_id,
         "replyTo": reply_to,
         "timestamp": timestamp,
-        "file_location": file_location
+        "file_location": file_location,
+        "message_id": message_id
     }
 
     # Send to sender
@@ -417,13 +422,18 @@ def get_messages():
         SELECT * FROM messages 
         WHERE ((user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?))
         AND timestamp >= datetime('now', '-1 month')  -- Exclude messages older than 1 month
-        ORDER BY timestamp DESC
+        ORDER BY id ASC
         LIMIT ? OFFSET ?
     ''', (user_id, friend_id, friend_id, user_id, limit, offset))
 
     messages = cursor.fetchall()
     messages_data = []
     for message in messages:
+        # Ensure the timestamp is in ISO 8601 format with UTC indicator
+        timestamp = message[7]  # e.g., "2025-03-23 10:23:00"
+        # SQLite stores timestamps in UTC, so append 'Z' to indicate UTC
+        if timestamp:
+            timestamp = f"{timestamp}Z"  # Add 'Z' to indicate UTC
         messages_data.append({
             'id': message[0],
             'username': message[1],
@@ -432,7 +442,7 @@ def get_messages():
             'message': message[4],
             'file_location': message[5],
             'reply_to': message[6],
-            'timestamp': message[7]  # Include timestamp
+            'timestamp': timestamp  # Standardized UTC timestamp
         })
 
     conn.close()
@@ -636,13 +646,21 @@ def send_message():
             VALUES (?, ?, ?, ?, ?, ?)
         ''', (session['username'], user_id, friend_id, message, file_location, reply_to if reply_to else None))
         conn.commit()
+
+        # Get the ID and timestamp of the newly inserted message
+        cursor.execute('SELECT id, timestamp FROM messages WHERE id = last_insert_rowid()')
+        result = cursor.fetchone()
+        message_id = result[0]
+        timestamp = result[1]
+        # Ensure the timestamp is in ISO 8601 format with UTC indicator
+        if timestamp:
+            timestamp = f"{timestamp}Z"  # Add 'Z' to indicate UTC
     except Exception as e:
         conn.close()
         return jsonify({"status": "error", "error": str(e)}), 500
 
     conn.close()
-    return jsonify({"status": "success"})
-
+    return jsonify({"status": "success", "message_id": message_id, "timestamp": timestamp})
 
 
 
