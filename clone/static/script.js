@@ -1025,11 +1025,24 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     const friendsWrapper = document.getElementById("friendsWrapper");
     const friendRequestsList = document.getElementById("friendRequestsList");
+    const loadingOverlay = document.getElementById("loadingOverlay");
 
     let messageOffset = 0;
     const messageLimit = 50;
     let isLoadingMessages = false;
     let allMessagesLoaded = false;
+
+    // Track loading state
+    let friendsLoaded = false;
+    let messagesLoaded = !friendId; // If no friendId, messages are "loaded" (not needed)
+
+    // Function to hide loading overlay when both friends and messages are loaded
+    function checkLoadingComplete() {
+        if (friendsLoaded && messagesLoaded) {
+            console.log("Both friends and messages loaded, hiding overlay");
+            loadingOverlay.classList.add("hidden");
+        }
+    }
 
     async function loadMessages(offset = 0, append = false) {
         if (isLoadingMessages || allMessagesLoaded) return;
@@ -1230,6 +1243,8 @@ document.addEventListener("DOMContentLoaded", async function () {
             console.error("Error fetching messages:", error);
         } finally {
             isLoadingMessages = false;
+            messagesLoaded = true; // Mark messages as loaded
+            checkLoadingComplete(); // Check if we can hide the overlay
         }
     }
 
@@ -1248,6 +1263,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         if (friendRequestsList) {
             friendRequestsList.innerHTML = "<div>Error: User not logged in</div>";
         }
+        loadingOverlay.classList.add("hidden"); // Hide overlay if there's an error
         return;
     }
 
@@ -1312,11 +1328,11 @@ document.addEventListener("DOMContentLoaded", async function () {
                         .catch(error => console.error("Error fetching friend data:", error));
                 });
 
-                // Periodically fetch online status as a fallback
-                setInterval(() => {
-                    console.log("Polling online status...");
+                // Fetch online status after rendering friends
+                setTimeout(() => {
                     fetchOnlineStatus();
-                }, 10000);
+                    fetchUnreadCounts();
+                }, 1000);
             } else {
                 const friendElement = document.createElement("span");
                 friendElement.innerHTML = `
@@ -1400,12 +1416,19 @@ document.addEventListener("DOMContentLoaded", async function () {
                 console.log("No incoming requests");
                 friendRequestsList.innerHTML = "<div>No incoming requests</div>";
             }
+
+            // Mark friends as loaded
+            friendsLoaded = true;
+            checkLoadingComplete(); // Check if we can hide the overlay
         })
         .catch(error => {
             console.error("Error fetching friends and requests:", error);
             if (friendRequestsList) {
                 friendRequestsList.innerHTML = "<div>Error fetching friend requests</div>";
             }
+            // Hide overlay on error
+            friendsLoaded = true;
+            checkLoadingComplete();
         });
 });
 

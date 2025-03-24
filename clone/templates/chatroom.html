@@ -9,7 +9,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Discord || {{friend_name}}</title>
+    <title>Synapse || {{friend_name}}</title>
     <link rel="stylesheet" href="/static/chatroom.css">
     <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"
         integrity="sha384-mkQ3/7FUtcGyoppY6bz/PORYoGqOl7/aSUMn2ymDOJcapfS6PHqxhRTMh1RR0Q6+"
@@ -27,10 +27,22 @@
 
     <script src="/static/script.js" defer></script>
 
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+
+
 
 </head>
 
 <body>
+
+
+    <div id="loadingOverlay" class="loading-overlay">
+        <video id="loadingVideo" autoplay loop muted playsinline>
+            <source src="/static/loading.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+    </div>
+
     <div class="main">
         <div class="sidebar" id="sidebar">
             <!-- <div class="hamburger-icon">☰</div> -->
