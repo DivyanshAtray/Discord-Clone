@@ -1,0 +1,13 @@
+# Python and virtual environment
+.venv/
+__pycache__/
+*.pyc
+
+# Database (since it won’t persist on Render)
+db.db
+
+# IDE files
+.idea/
+
+# Other
+*.log

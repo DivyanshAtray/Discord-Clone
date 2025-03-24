@@ -1084,4 +1084,10 @@ app.register_blueprint(gif_crop_bp)
 
 
 if __name__ == '__main__':
-    socketio.run(app,debug=True,allow_unsafe_werkzeug=True)
+    # For local development
+    socketio.run(app, debug=True, allow_unsafe_werkzeug=True)
+else:
+    # For Render deployment
+    import os
+    port = int(os.getenv("PORT", 10000))  # Render provides PORT; default to 10000 if not set
+    socketio.run(app, host="0.0.0.0", port=port, allow_unsafe_werkzeug=True)
