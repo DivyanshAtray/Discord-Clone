@@ -79,7 +79,12 @@ function handleFriendAction(url, requestId, requestElement) {
         })
         .then(data => {
             console.log(`Data from ${url}:`, data);
-            alert(data.status || data.error || "Action completed");
+            // Customize the alert message based on the action
+            if (url === "/add_friend" && data.status === "ok") {
+                alert("Friend added successfully");
+            } else {
+                alert(data.status || data.error || "Action completed");
+            }
 
             if (data.status === "ok" || data.status === "Friend request removed successfully!") {
                 console.log(`Removing request element for ID ${requestId}`);
@@ -153,7 +158,13 @@ function fetchOnlineStatus() {
     .catch(error => console.error("Error fetching online status:", error));
 }
 
+// Create an Audio object for the notification sound
+const notificationSound = new Audio('/static/notification.mp3');
 
+// Function to check if the tab is in focus
+function isTabFocused() {
+    return document.visibilityState === 'visible';
+}
 
 // Listen for user status updates
 socket.on("user_status", (data) => {
@@ -609,7 +620,26 @@ async function sendMessage() {
 socket.on("broadcast_message", async (data) => {
     console.log("Received broadcast_message:", data);
 
+    // Check if the message is from a friend (not the user themselves)
     const USER = getCookie("username");
+    const isUserMessage = data.username === USER;
+    if (!isUserMessage) {
+        // Check if the tab is not in focus
+        if (!isTabFocused()) {
+            console.log("Tab is not in focus, playing notification sound");
+            try {
+                await notificationSound.play();
+                console.log("Notification sound played successfully");
+            } catch (error) {
+                console.error("Error playing notification sound:", error);
+            }
+        } else {
+            console.log("Tab is in focus, no notification sound needed");
+        }
+    } else {
+        console.log("Message is from the user, no notification needed");
+    }
+
     const userId = getCookie("id");
     const username = data.username || "Anonymous";
     const message = data.message || "";
@@ -1456,8 +1486,6 @@ function handleReply(messageId, username, message) {
     inputField.focus(); // Focus the input field for user convenience
 }
 
-
-
 messagesContainer.addEventListener("click", (e) => {
     const repliedMessage = e.target.closest(".replied-message");
     if (repliedMessage) {
@@ -1468,15 +1496,6 @@ messagesContainer.addEventListener("click", (e) => {
         }
     }
 });
-
-
-
-
-
-
-
-
-
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Chatroom script loaded');

@@ -363,6 +363,7 @@ textarea{
     display: flex;
     justify-content: center;
     align-items: center;
+    z-index: 100;
 }
 
 .popup {
@@ -372,6 +373,7 @@ textarea{
     text-align: center;
     max-height: 30dvh;
     overflow-y: auto;
+    z-index: 1000;
 }
 
 .popup input {
@@ -380,6 +382,7 @@ textarea{
     width: 80%;
     background-color: #444;
     color: white;
+    z-index: 1000;
 }
 
 .friend_id{
@@ -472,6 +475,7 @@ textarea{
     margin: 5px 0;
     display: flex;
     align-items: flex-start;
+    z-index: 1;
 }
 
 /* Reply button (SVG) - hidden by default with opacity and visibility */
