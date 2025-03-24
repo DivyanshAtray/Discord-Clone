@@ -128,7 +128,7 @@
     cursor: pointer;
 }
 
-span{
+.sidebar span{
     margin-top: 20px;
     color: #babcc0;
     padding-left: 20px;
@@ -139,6 +139,19 @@ span{
     font-size: medium;
     font-weight: 500;
 }
+
+.top span{
+    margin-top: 20px;
+    color: #babcc0;
+    padding-left: 20px;
+    font-family: "Noto Sans", sans-serif;
+    display: flex;
+    align-items: center;
+    height: 60px;
+    font-size: medium;
+    font-weight: 500;
+}
+
 span:hover{
     cursor: pointer;
     background-color: #404249;
@@ -238,7 +251,7 @@ textarea{
     margin-top: 20px;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: space-around;
 
     position: relative;
     display: inline-block;
@@ -248,7 +261,8 @@ textarea{
     color: #dadada;
     position: absolute;
     right: 20px;
-    top: 47%;
+    /* top: 47%; */
+    bottom: 0%;
     transform: translateY(-50%);
     cursor: pointer;
 }
@@ -257,7 +271,8 @@ textarea{
     color: #dadada;
     position: absolute;
     right: 55px;
-    top: 50%;
+    /* top: 50%; */
+    bottom: 0%;
     transform: translateY(-50%);
     cursor: pointer;
 }
@@ -732,7 +747,7 @@ span.unread::after {
     margin-left: 250px;
     margin-right: 350px;
     width: calc(100% - 600px);
-    height: 100vh;
+    height: 100dvh;
     background-color: #36393f;
     position: relative;
 }
@@ -851,6 +866,10 @@ span.unread::after {
         margin-right: 0 !important;
     }
 
+    .inputbar{
+        margin-right: 0px;
+    }
+
     .sidebar {
         width: 300px !important;
         position: fixed;
@@ -922,3 +941,27 @@ span.unread::after {
 .edit-profile-btn:hover {
     background-color: #4752c4; /* Darker blue on hover */
 }
+
+
+
+
+
+
+
+
+
+
+
+
+.reply-preview button:hover {
+    color: #fff;
+}
+
+#replyToUsername:hover {
+    background: none;
+}
+
+#replyMessageText {
+    display: none;
+}
+

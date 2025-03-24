@@ -129,6 +129,20 @@ socket.on("connect_error", (error) => {
     console.error("WebSocket connection error:", error);
 });
 
+if (cancelReply) {
+    cancelReply.addEventListener("click", () => {
+        console.log("Cancel reply clicked");
+        replyToMessageId = null;
+        replyPreview.style.display = "none";
+        replyToUsername.textContent = "";
+        replyMessageText.textContent = "";
+        inputField.value = "";
+        autoResizeTextarea(inputField);
+    });
+} else {
+    console.warn("Cancel reply button not found");
+}
+
 // Function to format messages (Bold, Italics, Code Blocks)
 function formatMessage(text) {
     return text
@@ -1363,13 +1377,12 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 function handleReply(messageId, username, message) {
     replyToMessageId = messageId;
-    replyPreview.style.display = "block";
+    replyPreview.style.display = "flex"; // Use flex to match CSS
 
     // Truncate the message to 10 characters and add "...." if longer
     let truncatedMessage = message.length > 10 ? message.substring(0, 10) + "...." : message;
 
     // Remove any timestamp from the message (in case it's included)
-    // Since the message content might include the timestamp div, we'll strip it
     const tempDiv = document.createElement("div");
     tempDiv.innerHTML = truncatedMessage;
     const timestampDiv = tempDiv.querySelector(".message-timestamp");
@@ -1378,16 +1391,15 @@ function handleReply(messageId, username, message) {
     }
     truncatedMessage = tempDiv.textContent || tempDiv.innerText;
 
-    replyPreview.innerHTML = `Replying to ${username}: ${truncatedMessage}`;
+    // Update the username and message text
+    replyToUsername.textContent = username;
+    replyMessageText.textContent = truncatedMessage;
     replyPreview.dataset.messageId = messageId;
+
+    inputField.focus(); // Focus the input field for user convenience
 }
 
-cancelReply.addEventListener("click", () => {
-    replyToMessageId = null;
-    replyPreview.style.display = "none";
-    inputField.value = "";
-    autoResizeTextarea(inputField);
-});
+
 
 messagesContainer.addEventListener("click", (e) => {
     const repliedMessage = e.target.closest(".replied-message");

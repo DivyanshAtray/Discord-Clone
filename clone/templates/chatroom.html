@@ -91,20 +91,20 @@
                 <form id="message-form" action="/send_message" method="POST" enctype="multipart/form-data">
                     <input type="hidden" name="friend_id" value="{{ friend_id }}">
                     <div class="reply-preview" id="replyPreview" style="display: none;">
-                        <span> <span id="replyToUsername"></span></span>
+                        <span>Replying to&nbsp<span id="replyToUsername"></span></span>
                         <p id="replyMessageText"></p>
                         <button id="cancelReply">✖</button>
                     </div>
                     <textarea name="message" id="messageInput" placeholder="Message..." required></textarea>
-                    <input type="file" name="file" id="fileInput" style="display: none;">
-                    <img class="send" src="/static/send.svg" alt="send">
                     <img class="attachment" src="/static/attachment.svg" alt="attachment">
+                    <img class="send" src="/static/send.svg" alt="send">
+                    <input type="file" name="file" id="fileInput" style="display: none;">
                 </form>
             </div>
         </div>
         <div class="rightbar">
             <div class="friend-info">
-                
+
                 <img class="friend-pfp"
                     src="{% if friend_pfp %}data:image/jpeg;base64,{{ friend_pfp }}{% else %}/static/default-avatar.png{% endif %}"
                     alt="Friend's PFP">
@@ -113,9 +113,10 @@
                     alt="Friend's Banner">
                 <p>{{ friend_name }}</p>
                 <p>#{{ friend_id }}</p>
-            </div><hr>
+            </div>
+            <hr>
             <div class="user-info">
-    
+
                 <img class="user-pfp"
                     src="{% if user_pfp %}data:image/jpeg;base64,{{ user_pfp }}{% else %}/static/default-avatar.png{% endif %}"
                     alt="User's PFP">
@@ -130,7 +131,7 @@
         <div class="sidebar-overlay"></div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
-    
+
 </body>
 
 </html>
