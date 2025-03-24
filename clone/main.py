@@ -844,138 +844,148 @@ def get_unread_counts():
     return jsonify({"unread_counts": unread_counts})
 
 
-@app.route('/edit_profile', methods=['GET'])
+@app.route('/edit_profile', methods=['GET', 'POST'])
 def edit_profile():
     if 'username' not in session:
         flash("Please log in to edit your profile.", "error")
         return redirect('/login')
-    
-    # Fetch the current user's data to prefill the form
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    cursor.execute("SELECT username, image1, image2 FROM users WHERE id = ?", (session['id'],))
-    row = cursor.fetchone()
-    if not row:
-        conn.close()
-        flash("User not found.", "error")
-        return redirect('/login')
-    
-    # Encode current PFP and banner to base64 for display
-    current_pfp = base64.b64encode(row[1]).decode('utf-8') if row[1] else None
-    current_banner = base64.b64encode(row[2]).decode('utf-8') if row[2] else None
-    
-    conn.close()
-    
-    return render_template('edit_profile.html',
-                           current_username=row[0],
-                           current_pfp=current_pfp,
-                           current_banner=current_banner)
 
-@app.route('/edit_profile', methods=['POST'])
-def edit_profile_post():
-    if 'username' not in session:
-        flash("Please log in to edit your profile.", "error")
-        return redirect('/login')
-    
-    # Remove the size limit for this route
-    app.config['MAX_CONTENT_LENGTH'] = None  # No size limit for uploads
-    
-    # Get form data
-    new_username = request.form.get('username')
-    new_password = request.form.get('password')
-    image1_base64 = request.form.get('image1-base64')  # Base64-encoded PFP
-    image2_base64 = request.form.get('image2-base64')  # Base64-encoded banner
-    image1_format = request.form.get('image1-format', 'jpeg')  # Default to JPEG
-    image2_format = request.form.get('image2-format', 'jpeg')
-    
-    # Debug: Log the received data
-    print(f"Received edit profile data:")
-    print(f"New username: {new_username}")
-    print(f"New password: {new_password}")
-    print(f"Image1 base64 size: {len(image1_base64) / 1024 / 1024 if image1_base64 else 0} MB")
-    print(f"Image2 base64 size: {len(image2_base64) / 1024 / 1024 if image2_base64 else 0} MB")
-    print(f"Image1 format: {image1_format}")
-    print(f"Image2 format: {image2_format}")
-    
-    # Validate required fields
-    if not new_username:
-        flash("Username is required.", "error")
-        return redirect('/edit_profile')
-    
-    # Decode base64 images to binary (BLOB) for database storage
-    image1_blob = None
-    image2_blob = None
-    if image1_base64:
-        try:
-            image1_blob = base64.b64decode(image1_base64)
-        except Exception as e:
-            print(f"Error decoding image1 base64: {e}")
-            flash("Error processing profile picture.", "error")
-            return redirect('/edit_profile')
-    if image2_base64:
-        try:
-            image2_blob = base64.b64decode(image2_base64)
-        except Exception as e:
-            print(f"Error decoding image2 base64: {e}")
-            flash("Error processing banner image.", "error")
-            return redirect('/edit_profile')
-    
-    # Connect to the database
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    
-    # Check if the new username is already taken (excluding the current user)
-    cursor.execute("SELECT id FROM users WHERE username = ? AND id != ?", (new_username, session['id']))
-    existing_user = cursor.fetchone()
-    if existing_user:
-        conn.close()
-        flash("Username already taken. Please choose a different one.", "error")
-        return redirect('/edit_profile')
-    
-    # Fetch the current password if the new password is not provided
-    if not new_password:
-        cursor.execute("SELECT password FROM users WHERE id = ?", (session['id'],))
+    if request.method == 'GET':
+        # (GET logic remains unchanged)
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT username, image1, image2 FROM users WHERE id = ?", (session['id'],))
         row = cursor.fetchone()
-        new_password = row[0] if row else None
-    
-    # Update the user's data in the database
-    try:
-        update_query = """
-            UPDATE users 
-            SET username = ?, 
-                password = ?, 
-                image1 = ?, 
-                image2 = ?, 
-                image1_format = ?, 
-                image2_format = ? 
-            WHERE id = ?
-        """
-        cursor.execute(update_query, (
-            new_username,
-            new_password,
-            sqlite3.Binary(image1_blob) if image1_blob else None,  # New PFP
-            sqlite3.Binary(image2_blob) if image2_blob else None,  # New banner
-            image1_format,
-            image2_format,
-            session['id']
-        ))
-        conn.commit()
+        if not row:
+            conn.close()
+            flash("User not found.", "error")
+            return redirect('/login')
         
-        # Update the session with the new username
-        session['username'] = new_username
-    except Exception as e:
+        current_pfp = base64.b64encode(row[1]).decode('utf-8') if row[1] else None
+        current_banner = base64.b64encode(row[2]).decode('utf-8') if row[2] else None
+        
         conn.close()
-        print(f"Error updating profile: {e}")
-        flash("Error updating profile. Please try again.", "error")
-        return redirect('/edit_profile')
-    
-    conn.close()
-    
-    # Reset the size limit to the default (optional, for safety)
-    app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB limit
-    
-    flash("Profile updated successfully!", "success")
-    return redirect('/')
+        
+        return render_template('edit_profile.html',
+                               current_username=row[0],
+                               current_pfp=current_pfp,
+                               current_banner=current_banner)
+
+    elif request.method == 'POST':
+        # Get form data
+        new_username = request.form.get('username')
+        new_password = request.form.get('password')
+        image1_base64 = request.form.get('image1-base64')  # Base64-encoded PFP
+        image2_base64 = request.form.get('image2-base64')  # Base64-encoded banner
+        image1_format = request.form.get('image1-format', 'jpeg')  # Default to JPEG
+        image2_format = request.form.get('image2-format', 'jpeg')
+        
+        # Debug: Log the received data
+        print(f"Received edit profile data:")
+        print(f"New username: {new_username}")
+        print(f"New password: {new_password}")
+        print(f"Image1 base64 size: {len(image1_base64) / 1024 / 1024 if image1_base64 else 0} MB")
+        print(f"Image2 base64 size: {len(image2_base64) / 1024 / 1024 if image2_base64 else 0} MB")
+        print(f"Image1 format: {image1_format}")
+        print(f"Image2 format: {image2_format}")
+        
+        # Validate required fields
+        if not new_username:
+            flash("Username is required.", "error")
+            return redirect('/edit_profile')
+        
+        # Connect to the database
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        # Fetch the current user's data (including PFP, banner, and formats)
+        cursor.execute("SELECT password, image1, image2, image1_format, image2_format FROM users WHERE id = ?", (session['id'],))
+        row = cursor.fetchone()
+        if not row:
+            conn.close()
+            flash("User not found.", "error")
+            return redirect('/edit_profile')
+        
+        # Get current values
+        current_password = row[0]
+        current_image1 = row[1]  # Current PFP (BLOB)
+        current_image2 = row[2]  # Current banner (BLOB)
+        current_image1_format = row[3] if row[3] else 'jpeg'  # Current PFP format
+        current_image2_format = row[4] if row[4] else 'jpeg'  # Current banner format
+        
+        # Decode base64 images to binary (BLOB) for database storage
+        image1_blob = current_image1  # Default to current PFP
+        image2_blob = current_image2  # Default to current banner
+        final_image1_format = current_image1_format  # Default to current PFP format
+        final_image2_format = current_image2_format  # Default to current banner format
+        
+        if image1_base64:  # Only update PFP if a new file was uploaded
+            try:
+                image1_blob = base64.b64decode(image1_base64)
+                final_image1_format = image1_format
+            except Exception as e:
+                print(f"Error decoding image1 base64: {e}")
+                flash("Error processing profile picture.", "error")
+                conn.close()
+                return redirect('/edit_profile')
+        
+        if image2_base64:  # Only update banner if a new file was uploaded
+            try:
+                image2_blob = base64.b64decode(image2_base64)
+                final_image2_format = image2_format
+            except Exception as e:
+                print(f"Error decoding image2 base64: {e}")
+                flash("Error processing banner image.", "error")
+                conn.close()
+                return redirect('/edit_profile')
+        
+        # Check if the new username is already taken (excluding the current user)
+        cursor.execute("SELECT id FROM users WHERE username = ? AND id != ?", (new_username, session['id']))
+        existing_user = cursor.fetchone()
+        if existing_user:
+            conn.close()
+            flash("Username already taken. Please choose a different one.", "error")
+            return redirect('/edit_profile')
+        
+        # Use the current password if a new one is not provided
+        if not new_password:
+            new_password = current_password
+        
+        # Update the user's data in the database
+        try:
+            update_query = """
+                UPDATE users 
+                SET username = ?, 
+                    password = ?, 
+                    image1 = ?, 
+                    image2 = ?, 
+                    image1_format = ?, 
+                    image2_format = ? 
+                WHERE id = ?
+            """
+            cursor.execute(update_query, (
+                new_username,
+                new_password,
+                sqlite3.Binary(image1_blob) if image1_blob else None,  # Updated or current PFP
+                sqlite3.Binary(image2_blob) if image2_blob else None,  # Updated or current banner
+                final_image1_format,
+                final_image2_format,
+                session['id']
+            ))
+            conn.commit()
+            
+            # Update the session with the new username
+            session['username'] = new_username
+        except Exception as e:
+            conn.close()
+            print(f"Error updating profile: {e}")
+            flash("Error updating profile. Please try again.", "error")
+            return redirect('/edit_profile')
+        
+        conn.close()
+        
+        flash("Profile updated successfully!", "success")
+        return redirect('/')
 
 
 # Register the GIF cropping blueprint

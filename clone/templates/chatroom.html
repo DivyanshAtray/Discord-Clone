@@ -33,7 +33,8 @@
 <body>
     <div class="main">
         <div class="sidebar" id="sidebar">
-            <p>DM's</p>
+            <!-- <div class="hamburger-icon">☰</div> -->
+            <p>DIRECT MESSAGES</p>
             <div class="dms" id="friendsWrapper"></div>
 
             <div class="logout"><img class="logout_icon" id="lgout" src="/static/logout.svg" alt="no img">
@@ -126,8 +127,10 @@
                 <div class="edit-profile-btn" onclick="window.location.href='/edit_profile'">Edit Profile</div>
             </div>
         </div>
+        <div class="sidebar-overlay"></div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+    
 </body>
 
 </html>

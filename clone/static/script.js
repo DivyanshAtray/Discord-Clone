@@ -1402,153 +1402,148 @@ messagesContainer.addEventListener("click", (e) => {
 
 
 
-document.addEventListener("DOMContentLoaded", () => {
-    const sidebar = document.querySelector(".sidebar");
-    if (!sidebar) {
-        console.error("Sidebar element not found! Please ensure the element with class 'sidebar' exists in the DOM.");
-        return;
+
+
+
+
+
+
+
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('Chatroom script loaded');
+
+    // Elements
+    const sidebar = document.querySelector('.sidebar');
+    const rightbar = document.querySelector('.rightbar');
+    const sidebarOverlay = document.querySelector('.sidebar-overlay');
+    const hamburgerIcon = document.querySelector('.hamburger-icon');
+    const userInfo = document.querySelector('.user-info');
+
+    console.log('Elements:', { sidebar, rightbar, sidebarOverlay, hamburgerIcon, userInfo });
+
+    // Touch gesture variables
+    let touchStartX = 0;
+    let touchEndX = 0;
+    const swipeThreshold = 30;
+    const edgeThreshold = 100;
+
+    // Toggle sidebar (for hamburger icon click)
+    function toggleSidebar() {
+        console.log('Toggling sidebar');
+        sidebar.classList.toggle('open');
+        updateOverlay();
     }
 
-    const chat = document.querySelector(".chat");
-    if (!chat) {
-        console.error("Chat element not found! Please ensure the element with class 'chat' exists in the DOM.");
-        return;
+    // Toggle rightbar (for user info click)
+    function toggleRightbar() {
+        console.log('Toggling rightbar');
+        rightbar.classList.toggle('open');
+        updateOverlay();
     }
 
-    const rightbar = document.querySelector(".rightbar");
-    if (!rightbar) {
-        console.error("Rightbar element not found! Please ensure the element with class 'rightbar' exists in the DOM.");
-        return;
+    // Update overlay visibility
+    function updateOverlay() {
+        const isSidebarOpen = sidebar.classList.contains('open');
+        const isRightbarOpen = rightbar.classList.contains('open');
+        console.log(`Updating overlay: Sidebar open=${isSidebarOpen}, Rightbar open=${isRightbarOpen}`);
+        sidebarOverlay.classList.toggle('active', isSidebarOpen || isRightbarOpen);
     }
 
-    const sidebarOverlay = document.createElement("div");
-    sidebarOverlay.classList.add("sidebar-overlay");
-    document.body.appendChild(sidebarOverlay);
-
-    // Function to check if the screen width is less than 1320px
-    function isMobileView() {
-        const isMobile = window.innerWidth < 1320;
-        console.log(`Is mobile view? ${isMobile} (Window width: ${window.innerWidth}px)`);
-        return isMobile;
+    // Close both sidebar and rightbar (for overlay click)
+    function closeBars() {
+        console.log('Closing both bars');
+        sidebar.classList.remove('open');
+        rightbar.classList.remove('open');
+        sidebarOverlay.classList.remove('active');
     }
 
-    // Function to open the sidebar
-    function openSidebar() {
-        console.log("Opening sidebar");
-        sidebar.classList.add("open");
-        rightbar.classList.remove("open"); // Close rightbar if open
-        sidebarOverlay.classList.add("active");
+    // Handle touch start
+    function handleTouchStart(event) {
+        touchStartX = event.touches[0].clientX;
+        console.log(`Touch start: X=${touchStartX}, Window width=${window.innerWidth}`);
     }
 
-    // Function to close the sidebar
-    function closeSidebar() {
-        console.log("Closing sidebar");
-        sidebar.classList.remove("open");
-        sidebarOverlay.classList.remove("active");
+    // Handle touch move
+    function handleTouchMove(event) {
+        touchEndX = event.touches[0].clientX;
+        console.log(`Touch move: X=${touchEndX}`);
     }
 
-    // Function to open the rightbar
-    function openRightbar() {
-        console.log("Opening rightbar");
-        rightbar.classList.add("open");
-        sidebar.classList.remove("open"); // Close sidebar if open
-        sidebarOverlay.classList.add("active");
-    }
+    // Handle touch end (detect swipe)
+    function handleTouchEnd(event) {
+        touchEndX = event.changedTouches[0].clientX;
+        const swipeDistance = touchEndX - touchStartX;
+        console.log(`Touch end: StartX=${touchStartX}, EndX=${touchEndX}, SwipeDistance=${swipeDistance}`);
 
-    // Function to close the rightbar
-    function closeRightbar() {
-        console.log("Closing rightbar");
-        rightbar.classList.remove("open");
-        sidebarOverlay.classList.remove("active");
-    }
+        // Check if the screen width is less than 1320px
+        if (window.innerWidth <= 820) {
+            const isSidebarOpen = sidebar.classList.contains('open');
+            const isRightbarOpen = rightbar.classList.contains('open');
+            console.log(`Screen width <= 820px: Sidebar open=${isSidebarOpen}, Rightbar open=${isRightbarOpen}`);
+            console.log(`Edge conditions: Left edge=${touchStartX <= edgeThreshold}, Right edge=${touchStartX >= window.innerWidth - edgeThreshold}`);
 
-    // Function to initialize swipe detection using native touch events
-    function initializeSwipeDetection() {
-        console.log("Initializing native swipe detection on .chat element...");
-        let touchStartX = 0;
-        let touchEndX = 0;
-        const swipeThreshold = 30; // Reduced for sensitivity
-
-        // Debug: Log all touchstart events on the .chat element
-        chat.addEventListener("touchstart", (e) => {
-            console.log("Chat touchstart event detected", e);
-            console.log("Touch target:", e.target);
-            touchStartX = e.changedTouches[0].screenX;
-            console.log(`Native touchstart at X: ${touchStartX}`);
-            e.stopPropagation();
-        }, { passive: false });
-
-        // Touch end event
-        chat.addEventListener("touchend", (e) => {
-            console.log("Chat touchend event detected", e);
-            touchEndX = e.changedTouches[0].screenX;
-            console.log(`Native touchend at X: ${touchEndX}`);
-            const swipeDistance = touchEndX - touchStartX;
-            console.log(`Native swipe distance: ${swipeDistance}`);
-
-            // Swipe left to right: Open sidebar, close rightbar
-            if (swipeDistance > swipeThreshold) {
-                if (!sidebar.classList.contains("open") && !rightbar.classList.contains("open")) {
-                    console.log("Native swipe left to right detected - opening sidebar");
-                    openSidebar();
-                } else if (rightbar.classList.contains("open")) {
-                    console.log("Native swipe left to right detected - closing rightbar");
-                    closeRightbar();
-                }
+            // Detect swipe to open sidebar (swipe right from left edge)
+            if (touchStartX <= edgeThreshold && swipeDistance > swipeThreshold) {
+                console.log('Swiped right from left edge - opening sidebar');
+                sidebar.classList.add('open');
+                updateOverlay();
             }
-            // Swipe right to left: Open rightbar, close sidebar
-            else if (swipeDistance < -swipeThreshold) {
-                if (!rightbar.classList.contains("open") && !sidebar.classList.contains("open")) {
-                    console.log("Native swipe right to left detected - opening rightbar");
-                    openRightbar();
-                } else if (sidebar.classList.contains("open")) {
-                    console.log("Native swipe right to left detected - closing sidebar");
-                    closeSidebar();
-                }
-            } else {
-                console.log("Native swipe distance too small or no action needed");
+            // Detect swipe to open rightbar (swipe left from right edge)
+            else if (touchStartX >= window.innerWidth - edgeThreshold && swipeDistance < -swipeThreshold) {
+                console.log('Swiped left from right edge - opening rightbar');
+                rightbar.classList.add('open');
+                updateOverlay();
             }
-            e.stopPropagation();
-        }, { passive: false });
-
-        // Close sidebar or rightbar when clicking on the overlay
-        sidebarOverlay.addEventListener("click", (e) => {
-            console.log("Overlay clicked - closing open bar");
-            if (sidebar.classList.contains("open")) {
-                closeSidebar();
-            } else if (rightbar.classList.contains("open")) {
-                closeRightbar();
+            // Detect swipe to close sidebar (swipe left on sidebar)
+            else if (isSidebarOpen && swipeDistance < -swipeThreshold) {
+                console.log('Swiped left on sidebar - closing sidebar');
+                sidebar.classList.remove('open');
+                updateOverlay();
             }
-            e.stopPropagation();
-        });
-
-        // Prevent closing the sidebar or rightbar when clicking inside them
-        sidebar.addEventListener("click", (e) => {
-            console.log("Clicked inside sidebar - preventing close");
-            e.stopPropagation();
-        });
-
-        rightbar.addEventListener("click", (e) => {
-            console.log("Clicked inside rightbar - preventing close");
-            e.stopPropagation();
-        });
-    }
-
-    // Only enable swipe behavior on mobile view
-    if (isMobileView()) {
-        initializeSwipeDetection();
-    }
-
-    // Update sidebar and rightbar visibility on window resize
-    window.addEventListener("resize", () => {
-        if (!isMobileView()) {
-            console.log("Window resized to larger screen - resetting sidebar and rightbar state");
-            sidebar.classList.remove("open");
-            rightbar.classList.remove("open");
-            sidebarOverlay.classList.remove("active");
+            // Detect swipe to close rightbar (swipe right on rightbar)
+            else if (isRightbarOpen && swipeDistance > swipeThreshold) {
+                console.log('Swiped right on rightbar - closing rightbar');
+                rightbar.classList.remove('open');
+                updateOverlay();
+            }
+            else {
+                console.log('No swipe action triggered');
+            }
         } else {
-            console.log("Window resized to mobile view - enabling swipe detection");
-            initializeSwipeDetection();
+            console.log('Screen width > 820px - gestures disabled');
         }
-    });
+    }
+
+    // Event listeners for clicks (with null checks)
+    if (hamburgerIcon) {
+        hamburgerIcon.addEventListener('click', toggleSidebar);
+    } else {
+        console.warn('Hamburger icon not found');
+    }
+
+    if (userInfo) {
+        userInfo.addEventListener('click', toggleRightbar);
+    } else {
+        console.warn('User info not found');
+    }
+
+    if (sidebarOverlay) {
+        sidebarOverlay.addEventListener('click', closeBars);
+    } else {
+        console.warn('Sidebar overlay not found');
+    }
+
+    // Event listeners for touch gestures (use capture phase)
+    document.addEventListener('touchstart', handleTouchStart, true);
+    document.addEventListener('touchmove', handleTouchMove, true);
+    document.addEventListener('touchend', handleTouchEnd, true);
+
+    // Prevent default touch behavior on sidebar and rightbar to allow swiping
+    if (sidebar) {
+        sidebar.addEventListener('touchstart', (e) => e.stopPropagation());
+    }
+
+    if (rightbar) {
+        rightbar.addEventListener('touchstart', (e) => e.stopPropagation());
+    }
 });
