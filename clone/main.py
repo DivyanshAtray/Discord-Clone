@@ -5,6 +5,8 @@ import random
 import string,sqlite3
 import base64
 
+online_users = set()  # To track online user IDs
+
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024  # 1GB limit
 app.secret_key = "your_secret_key"
@@ -61,21 +63,76 @@ def get_user_friends(user_id):
 @socketio.on("connect")
 def handle_connect():
     if 'username' not in session:
+        print("No username in session, cannot connect")
         return
     username = session['username']
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
     user_id = cursor.fetchone()
-    conn.close()
     if user_id:
         user_id = user_id[0]
         socketio.server.enter_room(sid=request.sid, room=str(user_id))
         print(f"User {username} (ID: {user_id}) connected and joined room {user_id}")
 
+        # Add user to online_users set
+        online_users.add(user_id)
+        print(f"Online users: {online_users}")
+
+        # Get the user's friends
+        cursor.execute("SELECT friends FROM friends WHERE user_id = ?", (user_id,))
+        friends = cursor.fetchone()
+        if friends and friends[0]:
+            friend_ids = friends[0].split(',')
+            print(f"User {user_id} has friends: {friend_ids}")
+            # Broadcast online status to friends
+            for friend_id in friend_ids:
+                if friend_id:
+                    print(f"Broadcasting online status of user {user_id} to friend {friend_id}")
+                    emit("user_status", {"user_id": user_id, "status": "online"}, room=str(friend_id))
+        else:
+            print(f"User {user_id} has no friends")
+    else:
+        print(f"No user found for username {username}")
+    conn.close()
+
 @socketio.on("disconnect")
 def handle_disconnect():
-    print("A user disconnected")
+    if 'username' not in session:
+        print("No username in session, cannot disconnect")
+        return
+    username = session['username']
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
+    user_id = cursor.fetchone()
+    if user_id:
+        user_id = user_id[0]
+        print(f"User {username} (ID: {user_id}) disconnected")
+
+        # Remove user from online_users set
+        if user_id in online_users:
+            online_users.remove(user_id)
+            print(f"Online users after disconnect: {online_users}")
+
+            # Get the user's friends
+            cursor.execute("SELECT friends FROM friends WHERE user_id = ?", (user_id,))
+            friends = cursor.fetchone()
+            if friends and friends[0]:
+                friend_ids = friends[0].split(',')
+                print(f"User {user_id} has friends: {friend_ids}")
+                # Broadcast offline status to friends
+                for friend_id in friend_ids:
+                    if friend_id:
+                        print(f"Broadcasting offline status of user {user_id} to friend {friend_id}")
+                        emit("user_status", {"user_id": user_id, "status": "offline"}, room=str(friend_id))
+            else:
+                print(f"User {user_id} has no friends")
+        else:
+            print(f"User {user_id} was not in online_users set")
+    else:
+        print(f"No user found for username {username}")
+    conn.close()
 
 @socketio.on("send_message")
 def handle_send_message(data):
@@ -549,9 +606,12 @@ def login_post():
         user_id = row[0]
         session['username'] = username  # Save user in session
         session['id'] = user_id
+        conn.close()  # Close the connection
         return redirect("/")
     else:
-        flash("Pls Signup!!","error")
+        conn.close()  # Close the connection
+        flash("Invalid username or password. Please sign up if you don't have an account.", "error")
+        return redirect(url_for('login'))  # Redirect back to the login page
 
 @app.route('/signup')
 def signup():
@@ -842,6 +902,36 @@ def get_unread_counts():
 
     conn.close()
     return jsonify({"unread_counts": unread_counts})
+
+@app.route('/get_online_status', methods=['GET'])
+def get_online_status():
+    if 'username' not in session:
+        return jsonify({"status": "error", "error": "User not logged in"}), 401
+
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM users WHERE username = ?", (session['username'],))
+    user_id = cursor.fetchone()
+    if not user_id:
+        conn.close()
+        return jsonify({"status": "error", "error": "User not found"}), 404
+    user_id = user_id[0]
+
+    # Get the user's friends
+    cursor.execute("SELECT friends FROM friends WHERE user_id = ?", (user_id,))
+    friends = cursor.fetchone()
+    if not friends or not friends[0]:
+        conn.close()
+        return jsonify({"online_status": {}}), 200
+
+    friend_ids = friends[0].split(',')
+    online_status = {}
+    for friend_id in friend_ids:
+        if friend_id:
+            online_status[friend_id] = "online" if int(friend_id) in online_users else "offline"
+
+    conn.close()
+    return jsonify({"online_status": online_status})
 
 
 @app.route('/edit_profile', methods=['GET', 'POST'])

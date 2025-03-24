@@ -965,3 +965,17 @@ span.unread::after {
     display: none;
 }
 
+
+
+
+.pfp {
+    width: 40px; /* Adjust as needed */
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.pfp.online {
+    border: 3px solid #0186dfe1; /* Green border for online users */
+    box-shadow: 0 0 5px rgba(0, 255, 0, 0.5); 
+}
