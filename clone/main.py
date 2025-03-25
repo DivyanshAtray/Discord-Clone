@@ -1079,7 +1079,7 @@ def edit_profile():
 
 
 # Register the GIF cropping blueprint
-from .gif_crop import gif_crop_bp
+from gif_crop import gif_crop_bp
 app.register_blueprint(gif_crop_bp)
 
 
@@ -1091,4 +1091,3 @@ else:
     import os
     port = int(os.getenv("PORT", 10000))  # Render provides PORT; default to 10000 if not set
     socketio.run(app, host="0.0.0.0", port=port, allow_unsafe_werkzeug=True)
-    
