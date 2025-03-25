@@ -1009,3 +1009,24 @@ span.unread::after {
 .loading-overlay.hidden {
     display: none;
 }
+
+
+
+
+.message-content .attachment {
+    margin-top: 5px;
+    display: block;
+    width: 100%;
+    overflow: hidden; /* Prevent overflow */
+}
+
+.message-content .attachment a.download-link {
+    color: #00aff4;
+    text-decoration: none;
+    font-size: 12px;
+    display: inline-block;
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-break: break-all; /* Break long URLs */
+    white-space: normal; /* Allow wrapping */
+}

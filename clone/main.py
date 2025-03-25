@@ -5,6 +5,13 @@ import random
 import string,sqlite3
 import base64
 
+from datetime import datetime
+from werkzeug.utils import secure_filename
+from flask import send_from_directory
+import threading
+import time
+from datetime import datetime, timedelta
+
 online_users = set()  # To track online user IDs
 
 app = Flask(__name__)
@@ -473,19 +480,18 @@ def logout():
 @app.route('/messages')
 def get_messages():
     friend_id = request.args.get('friend_id', type=int)
-    limit = request.args.get('limit', default=50, type=int)  # Default to 50 messages
-    offset = request.args.get('offset', default=0, type=int)  # For pagination
+    limit = request.args.get('limit', default=50, type=int)
+    offset = request.args.get('offset', default=0, type=int)
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
     cursor.execute('SELECT id FROM users WHERE username = ?', (session['username'],))
     user_id = cursor.fetchone()[0]
 
-    # Fetch messages with limit and offset for pagination
     cursor.execute('''
         SELECT * FROM messages 
         WHERE ((user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?))
-        AND timestamp >= datetime('now', '-1 month')  -- Exclude messages older than 1 month
+        AND timestamp >= datetime('now', '-1 month')
         ORDER BY id ASC
         LIMIT ? OFFSET ?
     ''', (user_id, friend_id, friend_id, user_id, limit, offset))
@@ -493,10 +499,9 @@ def get_messages():
     messages = cursor.fetchall()
     messages_data = []
     for message in messages:
-        # Ensure the timestamp is in ISO 8601 format with UTC indicator
-        timestamp = message[7]  # e.g., "2025-03-23 10:23:00"
+        timestamp = message[7]
         if timestamp:
-            timestamp = f"{timestamp}Z"  # Add 'Z' to indicate UTC
+            timestamp = f"{timestamp}Z"
         messages_data.append({
             'id': message[0],
             'username': message[1],
@@ -506,7 +511,8 @@ def get_messages():
             'file_location': message[5],
             'reply_to': message[6],
             'timestamp': timestamp,
-            'seen': message[8]  # Include the seen status
+            'seen': message[8],
+            'file_timestamp': message[9]  # Include file_timestamp
         })
 
     conn.close()
@@ -733,18 +739,22 @@ def send_message():
         return jsonify({"status": "error", "error": "Friend ID is required"}), 400
 
     file_location = None
+    file_timestamp = None
     if file:
+        # Generate a unique filename to avoid conflicts
         filename = secure_filename(file.filename)
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        unique_filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}"
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
         file.save(file_path)
-        file_location = filename
+        file_location = unique_filename
+        file_timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
     try:
         # Insert the message into the database with seen = 0 (unseen)
         cursor.execute('''
-            INSERT INTO messages (username, user_id, friend_id, message, file_location, reply_to, seen)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (session['username'], user_id, friend_id, message, file_location, reply_to if reply_to else None, 0))
+            INSERT INTO messages (username, user_id, friend_id, message, file_location, reply_to, seen, file_timestamp)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (session['username'], user_id, friend_id, message, file_location, reply_to if reply_to else None, 0, file_timestamp))
         conn.commit()
 
         # Get the ID and timestamp of the newly inserted message
@@ -752,9 +762,8 @@ def send_message():
         result = cursor.fetchone()
         message_id = result[0]
         timestamp = result[1]
-        # Ensure the timestamp is in ISO 8601 format with UTC indicator
         if timestamp:
-            timestamp = f"{timestamp}Z"  # Add 'Z' to indicate UTC
+            timestamp = f"{timestamp}Z"
     except Exception as e:
         print(f"Error saving message: {str(e)}")
         conn.close()
@@ -934,6 +943,58 @@ def get_online_status():
     return jsonify({"online_status": online_status})
 
 
+
+@app.route('/uploads/<filename>')
+def serve_uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+
+
+
+def delete_old_attachments():
+    while True:
+        print("Checking for old attachments to delete...")
+        try:
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+
+            # Get messages with attachments older than 2 hours
+            two_hours_ago = (datetime.now() - timedelta(hours=3)).strftime('%Y-%m-%d %H:%M:%S')
+            cursor.execute('''
+                SELECT file_location
+                FROM messages
+                WHERE file_location IS NOT NULL
+                AND file_timestamp < ?
+            ''', (two_hours_ago,))
+            old_attachments = cursor.fetchall()
+
+            # Delete the files from the uploads folder
+            for attachment in old_attachments:
+                file_location = attachment[0]
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], file_location)
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                    print(f"Deleted old attachment: {file_location}")
+
+                # Update the database to remove the file_location
+                cursor.execute('''
+                    UPDATE messages
+                    SET file_location = NULL
+                    WHERE file_location = ?
+                ''', (file_location,))
+
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            print(f"Error deleting old attachments: {str(e)}")
+
+        # Sleep for 10 minutes before checking again
+        time.sleep(600)
+
+# Start the background thread when the app starts
+threading.Thread(target=delete_old_attachments, daemon=True).start()
+
+
 @app.route('/edit_profile', methods=['GET', 'POST'])
 def edit_profile():
     if 'username' not in session:
@@ -1079,7 +1140,7 @@ def edit_profile():
 
 
 # Register the GIF cropping blueprint
-from .gif_crop import gif_crop_bp
+from gif_crop import gif_crop_bp
 app.register_blueprint(gif_crop_bp)
 
 

@@ -34,9 +34,11 @@ cursor.execute('''
         file_location TEXT,
         reply_to INTEGER,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-        seen INTEGER DEFAULT 0,  -- Add seen column, default to 0 (unseen)
+        seen INTEGER DEFAULT 0,
+        file_timestamp DATETIME,  -- New column for file upload time
         FOREIGN KEY (user_id) REFERENCES users(id),
-        FOREIGN KEY (friend_id) REFERENCES users(id)
+        FOREIGN KEY (friend_id) REFERENCES users(id),
+        FOREIGN KEY (reply_to) REFERENCES messages(id)
     )
 ''')
 

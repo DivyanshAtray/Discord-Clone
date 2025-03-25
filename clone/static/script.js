@@ -231,6 +231,20 @@ function escapeHtml(text) {
     return text.replace(/</g, "<").replace(/>/g, ">");
 }
 
+function renderAttachment(fileLocation) {
+    if (!fileLocation) return null;
+
+    const link = document.createElement("a");
+    link.href = `/uploads/${fileLocation}`;
+    link.target = "_blank"; // Open in a new tab
+    link.classList.add("download-link");
+    link.textContent = `/uploads/${fileLocation}`; // Display only the raw link URL
+    console.log("renderAttachment: Generated link text:", link.textContent); // Debug log
+
+    return link; // Return the <a> element directly
+}
+
+
 function renderLatex() {
     if (window.MathJax) MathJax.typesetPromise();
 }
@@ -383,17 +397,19 @@ async function sendMessage() {
     const USER = getCookie("username");
     const userId = getCookie("id");
 
-    // Local rendering for your message
+    console.log("sendMessage: Starting to send message", { messageText, hasFile: !!selectedFile });
+
+    // Create the message div
     const messageDiv = document.createElement("div");
     messageDiv.classList.add("message", "user-message");
     const messageContent = document.createElement("div");
     messageContent.classList.add("message-content");
 
+    // Handle reply preview
     if (replyToMessageId) {
         const originalMessageElement = messagesContainer.querySelector(`[data-message-id="${replyToMessageId}"] .message-content`);
         let originalMessage = originalMessageElement?.textContent || "Original message";
 
-        // Remove the timestamp from the original message
         const tempDiv = document.createElement("div");
         tempDiv.innerHTML = originalMessageElement?.innerHTML || originalMessage;
         const timestampDiv = tempDiv.querySelector(".message-timestamp");
@@ -402,34 +418,45 @@ async function sendMessage() {
         }
         originalMessage = tempDiv.textContent || tempDiv.innerText;
 
-        // Truncate the message to 10 characters and add "...." if longer
         const truncatedMessage = originalMessage.length > 10 ? originalMessage.substring(0, 10) + "...." : originalMessage;
 
-        messageContent.innerHTML += `
-            <div class="replied-message" data-reply-to="${replyToMessageId}">
-                Replying to ${USER}: ${truncatedMessage}
-            </div>
-        `;
-    }
-    if (selectedFile) {
-        const fileURL = URL.createObjectURL(selectedFile);
-        messageContent.innerHTML += `<a href="${fileURL}" target="_blank">${selectedFile.name}</a>`;
-    }
-    if (messageText !== "") {
-        messageContent.innerHTML += formatMessage(messageText);
+        const replyDiv = document.createElement("div");
+        replyDiv.classList.add("replied-message");
+        replyDiv.dataset.replyTo = replyToMessageId;
+        replyDiv.textContent = `Replying to ${USER}: ${truncatedMessage}`;
+        messageContent.appendChild(replyDiv);
     }
 
-    // Add timestamp (we'll set this after getting the server response)
+    // Add the message text (if any)
+    if (messageText !== "") {
+        const messageTextDiv = document.createElement("div");
+        messageTextDiv.innerHTML = formatMessage(messageText);
+        messageContent.appendChild(messageTextDiv);
+    }
+
+    // Add a placeholder div for the attachment (if any)
+    let attachmentDiv = null;
+    if (selectedFile) {
+        attachmentDiv = document.createElement("div");
+        attachmentDiv.classList.add("attachment");
+        attachmentDiv.innerHTML = `<span>Uploading ${selectedFile.name}...</span>`;
+        messageContent.appendChild(attachmentDiv);
+    }
+
+    // Add timestamp placeholder
     const timestampDiv = document.createElement("div");
     timestampDiv.classList.add("message-timestamp");
+    timestampDiv.textContent = new Date().toLocaleTimeString();
     messageContent.appendChild(timestampDiv);
 
+    // Add reply button
     const replySvg = document.createElement("img");
     replySvg.classList.add("reply-btn");
     replySvg.src = "/static/reply.svg";
     replySvg.alt = "Reply";
     replySvg.addEventListener("click", () => handleReply(messageDiv.dataset.messageId, USER, messageText || selectedFile?.name));
 
+    // Fetch and add profile picture
     let profilePicSrc = "/static/default-avatar.png";
     try {
         const response = await fetch(`/profile?id=${userId}`);
@@ -446,55 +473,78 @@ async function sendMessage() {
     profilePic.src = profilePicSrc;
     profilePic.alt = "Profile Picture";
 
+    // Append elements to the message div
     messageDiv.appendChild(replySvg);
     messageDiv.appendChild(messageContent);
     messageDiv.appendChild(profilePic);
+
+    // Append the message to the container immediately
+    messagesContainer.appendChild(messageDiv);
+    scrollToBottom();
+    renderLatex();
 
     // Send to server
     const formData = new FormData();
     if (selectedFile) {
         formData.append("file", selectedFile);
-        console.log("Sending file:", selectedFile.name);
-        selectedFile = null;
+        console.log("sendMessage: Sending file:", selectedFile.name);
     }
     if (messageText !== "") {
         formData.append("message", messageText);
-        console.log("Sending message:", messageText);
+        console.log("sendMessage: Sending message:", messageText);
     }
     formData.append("replyTo", replyToMessageId || "");
     formData.append("friend_id", friendId);
 
-    let messageId, serverTimestamp;
+    let messageId, serverTimestamp, fileLocation;
     try {
-        console.log("Sending POST to /send_message...");
+        console.log("sendMessage: Sending POST to /send_message...");
         const response = await fetch("/send_message", {
             method: "POST",
             body: formData,
         });
         const data = await response.json();
+        console.log("sendMessage: Received response from /send_message:", data);
 
         if (data.status === "success") {
             messageId = data.message_id;
-            serverTimestamp = data.timestamp; // Use the server-assigned timestamp
-            messageDiv.dataset.messageId = messageId; // Set the server-assigned ID
+            serverTimestamp = data.timestamp;
+            fileLocation = data.file_location;
+            messageDiv.dataset.messageId = messageId;
 
-            // Set the timestamp for display
+            // Update the timestamp
             if (serverTimestamp) {
-                const date = new Date(serverTimestamp); // Parse as UTC
-                timestampDiv.textContent = date.toLocaleTimeString(); // Convert to local timezone
-            } else {
-                timestampDiv.textContent = new Date().toLocaleTimeString(); // Fallback
+                const date = new Date(serverTimestamp);
+                timestampDiv.textContent = date.toLocaleTimeString();
             }
 
-            // Insert the message in the correct position based on message ID
+            // Update the attachment with the server-side file location
+            if (fileLocation && attachmentDiv) {
+                console.log("sendMessage: Rendering attachment for file_location:", fileLocation);
+                const attachment = renderAttachment(fileLocation);
+                if (attachment) {
+                    attachmentDiv.innerHTML = ""; // Clear the "Uploading..." text
+                    attachmentDiv.appendChild(attachment);
+                    // Use requestAnimationFrame to ensure the DOM update is applied
+                    requestAnimationFrame(() => {
+                        attachmentDiv.style.display = "block"; // Ensure visibility
+                    });
+                } else {
+                    console.error("sendMessage: Failed to render attachment for file_location:", fileLocation);
+                    attachmentDiv.remove(); // Remove the attachment div if rendering fails
+                }
+            } else if (attachmentDiv) {
+                console.warn("sendMessage: No file_location received, removing attachment div");
+                attachmentDiv.remove(); // Remove the attachment div if no file location is returned
+            }
+
+            // Sort the message based on message ID
             const currentDate = new Date(serverTimestamp || new Date());
             const currentDateString = currentDate.toLocaleDateString();
             let inserted = false;
             let lastDate = null;
-            let lastDateSeparator = null;
             const children = Array.from(messagesContainer.children);
 
-            // Check if a date separator for the current day already exists
             let existingSeparator = null;
             for (const child of children) {
                 if (child.classList.contains("date-separator") && child.textContent === "Today") {
@@ -507,17 +557,11 @@ async function sendMessage() {
                 const child = children[i];
                 if (child.classList.contains("date-separator")) {
                     lastDate = child.textContent;
-                    lastDateSeparator = child;
                     continue;
                 }
                 if (child.classList.contains("message")) {
                     const childMessageId = parseInt(child.dataset.messageId);
-                    const childTimestamp = new Date(child.querySelector(".message-timestamp").textContent);
-                    const childDateString = childTimestamp.toLocaleDateString();
-
-                    // Compare message IDs
                     if (messageId < childMessageId) {
-                        // If we're inserting before a message, check if we need a date separator
                         if (!existingSeparator && lastDate !== currentDateString) {
                             const dateSeparator = document.createElement("div");
                             dateSeparator.classList.add("date-separator");
@@ -542,7 +586,7 @@ async function sendMessage() {
                             }
 
                             messagesContainer.insertBefore(dateSeparator, child);
-                            i++; // Skip the newly inserted separator
+                            i++;
                         }
                         messagesContainer.insertBefore(messageDiv, child);
                         inserted = true;
@@ -551,7 +595,6 @@ async function sendMessage() {
                 }
             }
 
-            // If the message wasn't inserted (e.g., it's the newest), append it
             if (!inserted) {
                 if (!existingSeparator && lastDate !== currentDateString) {
                     const dateSeparator = document.createElement("div");
@@ -584,14 +627,14 @@ async function sendMessage() {
             scrollToBottom();
             renderLatex();
 
-            console.log("POST successful, emitting socket message:", {
+            console.log("sendMessage: POST successful, emitting socket message:", {
                 message: messageText,
                 username: USER,
                 userId: userId,
                 friendId: friendId,
                 replyTo: replyToMessageId,
                 timestamp: serverTimestamp || new Date().toISOString(),
-                file_location: selectedFile ? selectedFile.name : null,
+                file_location: fileLocation,
                 message_id: messageId
             });
             socket.emit("send_message", {
@@ -601,43 +644,50 @@ async function sendMessage() {
                 friendId: friendId,
                 replyTo: replyToMessageId,
                 timestamp: serverTimestamp || new Date().toISOString(),
-                file_location: selectedFile ? selectedFile.name : null,
+                file_location: fileLocation,
                 message_id: messageId
             });
         } else {
-            console.error("Server rejected message:", data);
+            console.error("sendMessage: Server rejected message:", data);
+            messageDiv.remove();
         }
     } catch (error) {
-        console.error("Error during sendMessage:", error);
+        console.error("sendMessage: Error during sendMessage:", error);
+        messageDiv.remove();
+        if (attachmentDiv) {
+            attachmentDiv.innerHTML = `<span style="color: red;">Failed to upload ${selectedFile?.name}</span>`;
+        }
     }
 
+    // Reset the input field and selected file
     inputField.value = "";
     autoResizeTextarea(inputField);
+    selectedFile = null;
+    fileInput.value = "";
     replyToMessageId = null;
     replyPreview.style.display = "none";
 }
 
 socket.on("broadcast_message", async (data) => {
-    console.log("Received broadcast_message:", data);
+    console.log("broadcast_message: Received broadcast_message:", data);
 
-    // Check if the message is from a friend (not the user themselves)
     const USER = getCookie("username");
     const isUserMessage = data.username === USER;
     if (!isUserMessage) {
-        // Check if the tab is not in focus
         if (!isTabFocused()) {
-            console.log("Tab is not in focus, playing notification sound");
+            console.log("broadcast_message: Tab is not in focus, playing notification sound");
             try {
                 await notificationSound.play();
-                console.log("Notification sound played successfully");
+                console.log("broadcast_message: Notification sound played successfully");
             } catch (error) {
-                console.error("Error playing notification sound:", error);
+                console.error("broadcast_message: Error playing notification sound:", error);
             }
         } else {
-            console.log("Tab is in focus, no notification sound needed");
+            console.log("broadcast_message: Tab is in focus, no notification sound needed");
         }
     } else {
-        console.log("Message is from the user, no notification needed");
+        console.log("broadcast_message: Message is from the user, no notification needed");
+        return;
     }
 
     const userId = getCookie("id");
@@ -647,41 +697,30 @@ socket.on("broadcast_message", async (data) => {
     const recipientId = data.friendId;
     const replyTo = data.replyTo;
     const timestamp = data.timestamp || new Date().toISOString();
-    const file_location = data.file_location;
+    const fileLocation = data.file_location;
     const messageId = data.message_id;
-    let seen = data.seen || 0; // Get the seen status
+    let seen = data.seen || 0;
 
-    // Skip if no valid data
-    if (!username || (!message && !file_location) || !messageId) {
-        console.error("Invalid broadcast data:", data);
+    if (!username || (!message && !fileLocation) || !messageId) {
+        console.error("broadcast_message: Invalid broadcast data:", data);
         return;
     }
 
-    // Filter messages: Display only if part of the current conversation
     const isFromCurrentUserToFriend = (senderId == userId && recipientId == friendId);
     const isFromFriendToCurrentUser = (senderId == friendId && recipientId == userId);
     if (!(isFromCurrentUserToFriend || isFromFriendToCurrentUser)) {
-        console.log("Message not for this conversation, skipping...");
-        // Fetch updated unread counts
+        console.log("broadcast_message: Message not for this conversation, skipping...");
         fetchUnreadCounts();
         return;
     }
 
-    // Skip your own message (already rendered locally in sendMessage)
-    if (username === USER && isFromCurrentUserToFriend) {
-        console.log("Skipping own message (rendered locally)");
-        return;
-    }
-
-    console.log("Rendering friend’s message from:", username);
+    console.log("broadcast_message: Rendering friend’s message from:", username);
 
     const messageDiv = document.createElement("div");
     messageDiv.classList.add("message", "bot-message");
 
-    // Check if the message is visible immediately (e.g., chat is at the bottom)
-    const isAtBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop <= messagesContainer.clientHeight + 50; // Within 50px of the bottom
+    const isAtBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop <= messagesContainer.clientHeight + 50;
     if (isAtBottom && !seen) {
-        // Mark the message as seen immediately since the user is viewing the chat
         try {
             const response = await fetch("/mark_messages_seen", {
                 method: "POST",
@@ -696,28 +735,26 @@ socket.on("broadcast_message", async (data) => {
             });
 
             if (!response.ok) {
-                console.error(`Failed to mark new message ${messageId} as seen: HTTP ${response.status}`);
+                console.error(`broadcast_message: Failed to mark new message ${messageId} as seen: HTTP ${response.status}`);
                 const text = await response.text();
-                console.error("Response body:", text);
+                console.error("broadcast_message: Response body:", text);
                 return;
             }
 
             const data = await response.json();
             if (data.status === "success") {
-                seen = 1; // Update the seen status
-                console.log(`Marked new message ${messageId} as seen immediately`);
-                // Fetch updated unread counts
+                seen = 1;
+                console.log(`broadcast_message: Marked new message ${messageId} as seen immediately`);
                 fetchUnreadCounts();
             }
         } catch (error) {
-            console.error("Error marking new message as seen:", error);
+            console.error("broadcast_message: Error marking new message as seen:", error);
         }
     }
 
     messageDiv.dataset.messageId = messageId;
-    messageDiv.dataset.seen = seen ? "1" : "0"; // Add seen status
+    messageDiv.dataset.seen = seen ? "1" : "0";
     if (!seen) {
-        // Fetch updated unread counts after marking as seen
         fetchUnreadCounts();
     }
     const messageContent = document.createElement("div");
@@ -727,7 +764,6 @@ socket.on("broadcast_message", async (data) => {
         const originalMessageElement = messagesContainer.querySelector(`[data-message-id="${replyTo}"] .message-content`);
         let originalMessage = originalMessageElement?.textContent || "Original message";
 
-        // Remove the timestamp from the original message
         const tempDiv = document.createElement("div");
         tempDiv.innerHTML = originalMessageElement?.innerHTML || originalMessage;
         const timestampDiv = tempDiv.querySelector(".message-timestamp");
@@ -736,32 +772,49 @@ socket.on("broadcast_message", async (data) => {
         }
         originalMessage = tempDiv.textContent || tempDiv.innerText;
 
-        // Truncate the message to 10 characters and add "...." if longer
         const truncatedMessage = originalMessage.length > 10 ? originalMessage.substring(0, 10) + "...." : originalMessage;
 
-        messageContent.innerHTML += `
-            <div class="replied-message" data-reply-to="${replyTo}">
-                Replying to ${username}: ${truncatedMessage}
-            </div>
-        `;
+        const replyDiv = document.createElement("div");
+        replyDiv.classList.add("replied-message");
+        replyDiv.dataset.replyTo = replyTo;
+        replyDiv.textContent = `Replying to ${username}: ${truncatedMessage}`;
+        messageContent.appendChild(replyDiv);
     }
-    if (file_location) {
-        messageContent.innerHTML += `<a href="/uploads/${file_location}" target="_blank">${file_location}</a>`;
+
+    // Render the attachment as a child element
+    if (fileLocation) {
+        console.log("broadcast_message: Rendering attachment for file_location:", fileLocation);
+        const attachment = renderAttachment(fileLocation);
+        if (attachment) {
+            messageContent.appendChild(attachment);
+            // Use requestAnimationFrame to ensure the DOM update is applied
+            requestAnimationFrame(() => {
+                messageContent.style.display = "flex"; // Ensure visibility
+            });
+        } else {
+            console.error("broadcast_message: Failed to render attachment for file_location:", fileLocation);
+        }
+    } else {
+        console.warn("broadcast_message: No file_location in broadcast data");
     }
+
+    // Render the message text
     if (message) {
-        messageContent.innerHTML += formatMessage(message);
+        const messageTextDiv = document.createElement("div");
+        messageTextDiv.innerHTML = formatMessage(message);
+        messageContent.appendChild(messageTextDiv);
     }
 
     const timestampDiv = document.createElement("div");
     timestampDiv.classList.add("message-timestamp");
-    timestampDiv.textContent = new Date(timestamp).toLocaleTimeString(); // Parse as UTC and convert to local
+    timestampDiv.textContent = new Date(timestamp).toLocaleTimeString();
     messageContent.appendChild(timestampDiv);
 
     const replySvg = document.createElement("img");
     replySvg.classList.add("reply-btn");
     replySvg.src = "/static/reply.svg";
     replySvg.alt = "Reply";
-    replySvg.addEventListener("click", () => handleReply(messageDiv.dataset.messageId, username, message || file_location));
+    replySvg.addEventListener("click", () => handleReply(messageDiv.dataset.messageId, username, message || fileLocation));
 
     let profilePicSrc = "/static/default-avatar.png";
     if (senderId) {
@@ -772,7 +825,7 @@ socket.on("broadcast_message", async (data) => {
                 profilePicSrc = `data:image/jpeg;base64,${profileData[0].image1}`;
             }
         } catch (error) {
-            console.error("Error fetching profile picture:", error);
+            console.error("broadcast_message: Error fetching profile picture:", error);
         }
     }
 
@@ -785,15 +838,13 @@ socket.on("broadcast_message", async (data) => {
     messageDiv.appendChild(messageContent);
     messageDiv.appendChild(replySvg);
 
-    // Insert the message in the correct position based on message ID
+    // Sort the message based on message ID
     const currentDate = new Date(timestamp);
     const currentDateString = currentDate.toLocaleDateString();
     let inserted = false;
     let lastDate = null;
-    let lastDateSeparator = null;
     const children = Array.from(messagesContainer.children);
 
-    // Check if a date separator for the current day already exists
     let existingSeparator = null;
     for (const child of children) {
         if (child.classList.contains("date-separator") && child.textContent === "Today") {
@@ -806,17 +857,11 @@ socket.on("broadcast_message", async (data) => {
         const child = children[i];
         if (child.classList.contains("date-separator")) {
             lastDate = child.textContent;
-            lastDateSeparator = child;
             continue;
         }
         if (child.classList.contains("message")) {
             const childMessageId = parseInt(child.dataset.messageId);
-            const childTimestamp = new Date(child.querySelector(".message-timestamp").textContent);
-            const childDateString = childTimestamp.toLocaleDateString();
-
-            // Compare message IDs
             if (messageId < childMessageId) {
-                // If we're inserting before a message, check if we need a date separator
                 if (!existingSeparator && lastDate !== currentDateString) {
                     const dateSeparator = document.createElement("div");
                     dateSeparator.classList.add("date-separator");
@@ -841,7 +886,7 @@ socket.on("broadcast_message", async (data) => {
                     }
 
                     messagesContainer.insertBefore(dateSeparator, child);
-                    i++; // Skip the newly inserted separator
+                    i++;
                 }
                 messagesContainer.insertBefore(messageDiv, child);
                 inserted = true;
@@ -850,7 +895,6 @@ socket.on("broadcast_message", async (data) => {
         }
     }
 
-    // If the message wasn't inserted (e.g., it's the newest), append it
     if (!inserted) {
         if (!existingSeparator && lastDate !== currentDateString) {
             const dateSeparator = document.createElement("div");
@@ -882,7 +926,7 @@ socket.on("broadcast_message", async (data) => {
 
     scrollToBottom();
     renderLatex();
-    observeUnreadMessages(); // Observe the new message for visibility
+    observeUnreadMessages();
 });
 
 function scrollToBottom() {
@@ -1170,8 +1214,12 @@ document.addEventListener("DOMContentLoaded", async function () {
                 }
 
                 if (msg.file_location) {
-                    messageContent.innerHTML += `<a href="/uploads/${msg.file_location}" target="_blank">${msg.file_location}</a>`;
+                    const attachment = renderAttachment(msg.file_location);
+                    if (attachment) {
+                        messageContent.appendChild(attachment);
+                    }
                 }
+
                 if (msg.message) {
                     messageContent.innerHTML += formatMessage(msg.message);
                 }
@@ -1273,8 +1321,8 @@ document.addEventListener("DOMContentLoaded", async function () {
             console.error("Error fetching messages:", error);
         } finally {
             isLoadingMessages = false;
-            messagesLoaded = true; // Mark messages as loaded
-            checkLoadingComplete(); // Check if we can hide the overlay
+            messagesLoaded = true;
+            checkLoadingComplete();
         }
     }
 
@@ -1293,7 +1341,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         if (friendRequestsList) {
             friendRequestsList.innerHTML = "<div>Error: User not logged in</div>";
         }
-        loadingOverlay.classList.add("hidden"); // Hide overlay if there's an error
+        loadingOverlay.classList.add("hidden");
         return;
     }
 
@@ -1358,7 +1406,6 @@ document.addEventListener("DOMContentLoaded", async function () {
                         .catch(error => console.error("Error fetching friend data:", error));
                 });
 
-                // Fetch online status after rendering friends
                 setTimeout(() => {
                     fetchOnlineStatus();
                     fetchUnreadCounts();
@@ -1447,16 +1494,14 @@ document.addEventListener("DOMContentLoaded", async function () {
                 friendRequestsList.innerHTML = "<div>No incoming requests</div>";
             }
 
-            // Mark friends as loaded
             friendsLoaded = true;
-            checkLoadingComplete(); // Check if we can hide the overlay
+            checkLoadingComplete();
         })
         .catch(error => {
             console.error("Error fetching friends and requests:", error);
             if (friendRequestsList) {
                 friendRequestsList.innerHTML = "<div>Error fetching friend requests</div>";
             }
-            // Hide overlay on error
             friendsLoaded = true;
             checkLoadingComplete();
         });
@@ -1464,12 +1509,26 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 function handleReply(messageId, username, message) {
     replyToMessageId = messageId;
-    replyPreview.style.display = "flex"; // Use flex to match CSS
+    replyPreview.style.display = "flex";
+
+    // Check if the message is an attachment
+    const messageElement = messagesContainer.querySelector(`[data-message-id="${messageId}"] .message-content`);
+    const attachmentDiv = messageElement.querySelector(".attachment");
+    let displayMessage = message;
+
+    if (attachmentDiv) {
+        const img = attachmentDiv.querySelector("img");
+        if (img) {
+            displayMessage = "[Image]";
+        } else {
+            const link = attachmentDiv.querySelector("a");
+            displayMessage = link ? link.textContent.replace("📎 ", "").replace(" (Download)", "") : message;
+        }
+    }
 
     // Truncate the message to 10 characters and add "...." if longer
-    let truncatedMessage = message.length > 10 ? message.substring(0, 10) + "...." : message;
+    let truncatedMessage = displayMessage.length > 10 ? displayMessage.substring(0, 10) + "...." : displayMessage;
 
-    // Remove any timestamp from the message (in case it's included)
     const tempDiv = document.createElement("div");
     tempDiv.innerHTML = truncatedMessage;
     const timestampDiv = tempDiv.querySelector(".message-timestamp");
@@ -1478,14 +1537,12 @@ function handleReply(messageId, username, message) {
     }
     truncatedMessage = tempDiv.textContent || tempDiv.innerText;
 
-    // Update the username and message text
     replyToUsername.textContent = username;
     replyMessageText.textContent = truncatedMessage;
     replyPreview.dataset.messageId = messageId;
 
-    inputField.focus(); // Focus the input field for user convenience
+    inputField.focus();
 }
-
 messagesContainer.addEventListener("click", (e) => {
     const repliedMessage = e.target.closest(".replied-message");
     if (repliedMessage) {
