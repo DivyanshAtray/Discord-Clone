@@ -67,5 +67,4 @@ if 'image2_format' not in columns:
 
 conn.commit()
 conn.close()
-
 print(f"Database initialized at {db_path}")
