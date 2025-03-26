@@ -205,17 +205,18 @@ function formatMessage(text) {
         .replace(/#(.+?)#/g, "<h1>$1</h1>") // Heading
         .replace(/\*(.+?)\*/g, "<i>$1</i>") // Italics
         .replace(/```([\s\S]+?)```/g, (match, code) => `
+        <button class="copy-btn" onclick="copyToClipboard(this)" style="position: static; right: 5px; top: 5px; cursor: pointer;">📋</button>
     <div class="code-block" style="position: relative; display: inline-block;">
         <pre><code>${escapeHtml(code)}</code></pre>
-        <button class="copy-btn" onclick="copyToClipboard(this)"
-            style="position: absolute; right: 5px; top: 5px; cursor: pointer;">📋</button>
     </div>
 `);
 }
 
-// Function to copy code to clipboard
 function copyToClipboard(button) {
-    const codeBlock = button.previousElementSibling; // Get the <pre><code> block
+    // Navigate to the next sibling (div.code-block), then to its <pre> and <code> child
+    const codeBlockDiv = button.nextElementSibling; // <div class="code-block">
+    const preBlock = codeBlockDiv.querySelector("pre"); // <pre>
+    const codeBlock = preBlock.querySelector("code"); // <code>
     const code = codeBlock.textContent.trim();
 
     navigator.clipboard.writeText(code)

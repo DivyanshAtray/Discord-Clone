@@ -278,23 +278,6 @@ textarea{
 }
 
 
-.message {
-    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
-    font-size: large;
-    min-width: 30px;
-    max-width: 60%;
-    background-color: #292b30; /* Discord-like color */
-    color: white;
-    margin-right: 30px;
-    margin-left: 30px;
-    padding: 10px 15px;
-    border-radius: 10px;
-    font-size: 14px;
-    align-self: flex-end; /* Aligns messages to the right */
-    word-wrap: break-word;
-    /* box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2); */
-    animation: fadeIn 0.3s ease-in-out;
-}
 
 /* Optional: Style for received messages (if needed later) */
 .message.received {
@@ -468,15 +451,7 @@ textarea{
 
 
 
-/* Style for each message container */
-.message {
-    position: relative;
-    padding: 10px;
-    margin: 5px 0;
-    display: flex;
-    align-items: flex-start;
-    z-index: 1;
-}
+
 
 /* Reply button (SVG) - hidden by default with opacity and visibility */
 .reply-btn {
@@ -566,15 +541,14 @@ textarea{
 
 .message {
     display: flex;
-    align-items: center;
     margin: 10px 20px;
     padding: 10px;
-    max-width: 60%;
     background-color: #292b30;
     color: white;
     border-radius: 10px;
     font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
     font-size: 14px;
+    /* overflow-x: scroll; */
 }
 
 .user-message {
@@ -583,8 +557,10 @@ textarea{
     align-self: flex-end;
     background-color: #1c1c1c;
     min-width:10%;
-    max-width:60%;
+    max-width:80%;
     color:white;
+    /* display: flex; */
+    
 }
 
 .bot-message {
@@ -594,7 +570,7 @@ textarea{
     background-color: #131418;
     color: white;
     min-width:10%;
-    max-width:60%;
+    max-width:80%;
 }
 
 .message-pfp {
@@ -605,10 +581,13 @@ textarea{
 }
 
 .message-content {
-    max-width: 100%; /* Adjust as needed */
+    max-width: 90%;
     word-wrap: break-word;
     margin-right: 10px;
     margin-left: 10px;
+    /* max-width: 300px; */
+    max-height: 500px;
+    overflow-x: auto;
 }
 
 .reply-btn {
@@ -847,17 +826,19 @@ span.unread::after {
 }
 
 @media (max-width: 820px) {
-    body {
-        overflow: hidden;
-    }
 
     .messages {
-        width: 90vw;
+        width: 100%;
     }
 
     .message {
         margin: 0px;
         max-width: 90%;
+    }
+    .message-content{
+        max-width: 90%;
+        max-height: 400px;
+        overflow-x: auto;
     }
 
     textarea {
@@ -1012,21 +993,3 @@ span.unread::after {
 
 
 
-
-.message-content .attachment {
-    margin-top: 5px;
-    display: block;
-    width: 100%;
-    overflow: hidden; /* Prevent overflow */
-}
-
-.message-content .attachment a.download-link {
-    color: #00aff4;
-    text-decoration: none;
-    font-size: 12px;
-    display: inline-block;
-    max-width: 100%;
-    overflow-wrap: break-word;
-    word-break: break-all; /* Break long URLs */
-    white-space: normal; /* Allow wrapping */
-}

@@ -1140,7 +1140,7 @@ def edit_profile():
 
 
 # Register the GIF cropping blueprint
-from .gif_crop import gif_crop_bp
+from gif_crop import gif_crop_bp
 app.register_blueprint(gif_crop_bp)
 
 
