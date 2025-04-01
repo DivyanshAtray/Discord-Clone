@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap"
+        rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/kute.js@2.1.2/dist/kute.min.js"></script>
+    <title>Developers</title>
+
+
+    <style>
+        * {
+            overflow: hidden;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: radial-gradient(circle at bottom left, #03031b, #121681);
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        body::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(0, 0, 0, 0.1) 9%, transparent 0%), rgba(255, 255, 255, 0.05);
+            background-size: 5px 5px, 100%;
+            opacity: 0.4;
+            pointer-events: none;
+            /* Doesn't block interaction with elements */
+        }
+
+        nav {
+            width: 100vw;
+            height: 35dvh;
+            background-color: #313dc383;
+            color: aliceblue;
+            display: flex;
+            flex-direction: column;
+
+
+        }
+
+        h3,
+        h1 {
+            position: relative;
+            color: #ffffdd;
+
+        }
+
+        h3 {
+            font-family: "Open Sans", sans-serif;
+            font-size: x-large;
+            font-weight: 600;
+            transform: translate(15%, 20px);
+        }
+
+        h1 {
+            font-family: "Open Sans", sans-serif;
+            font-size: 7rem;
+            font-weight: 800;
+            margin-top: 0px;
+            transform: translate(16%, -40px);
+        }
+
+        .curve {
+            position: absolute;
+            width: 100%;
+            height: 225px;
+            bottom: 0;
+        }
+
+        .main {
+            height: 60dvh;
+            width: 100vw;
+            display: flex;
+            flex-direction: row;
+            justify-content: space-around;
+
+            position: relative;
+        }
+        .blob-content {
+        z-index: 1;
+        width: 100%;
+        height: 60dvh;
+        position: absolute;
+        display: flex;
+        justify-content: space-around;
+        transform: translateY(35%);
+      }
+
+      .blobs{
+        transform: translateY(50px);
+      }
+
+        img{
+            width: 180px;
+            height: 180px;
+            border-radius: 100%;
+            /* transform: translate(0px, 80px); */
+        }
+    
+
+        .custom-shape-divider-top-1743167841 {
+            position: absolute;
+            top: 35dvh;
+            left: 0;
+            width: 100%;
+            overflow: hidden;
+            line-height: 0;
+        }
+
+        .custom-shape-divider-top-1743167841 svg {
+            position: relative;
+            display: block;
+            width: calc(113% + 1.3px);
+            height: 130px;
+        }
+
+        .custom-shape-divider-top-1743167841 .shape-fill {
+            fill: #313DC383;
+        }
+
+        .blob-motion{
+            position: absolute;
+            /* transform: translateX(-20%); */
+            z-index: 0;
+        }
+        
+        @media (max-width: 1155px){
+            .main svg{
+                width: 980;
+                height: 780;
+            }
+            img{
+                width: 160px;
+                height: 160px;
+            }
+        }
+
+        @media (max-width: 800px){
+            .blob-content{
+                flex-direction: column;
+                transform: translate(0%,3%);
+                justify-content: space-around;
+                align-items: center;
+        
+            }
+            .main{
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+            }
+            img{
+                width: 150px;
+                height: 150px;
+                transform: translate(0, 30%);
+            }
+            a{
+                width: 200px;
+                display: flex;
+                justify-content: center;
+                align-items:start;
+                height: 200px;
+            }
+            h1{
+                transform: translate(5%, -25%);
+    
+            }
+            
+        }
+
+        @media (max-width: 700px){
+            h1{
+                font-size: 5rem;
+            }
+        }
+
+        @media (max-width: 500px){
+            .blobs{
+                scale: 0.9;
+            }
+            h1{
+                font-size: 3.25rem;
+            }
+        }
+    
+    </style>
+
+
+</head>
+
+<body>
+    <nav>
+        <h3>Meet the,</h3> <br>
+        <h1>Developers</h1>
+        <div class="custom-shape-divider-top-1743167841">
+            <svg data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120"
+                preserveAspectRatio="none">
+                <path
+                    d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z"
+                    class="shape-fill"></path>
+            </svg>
+        </div>
+    </nav>
+
+
+    <div class="main">
+        <div class="blob-content">
+        <a href="https://github.com/DivyanshAtray" target="_blank"><img src="/static/image.png" alt="dev1"></a>
+        <a href="https://github.com/Jivesh-Bisht" target="_blank"><img src="https://techlogitic.net/wp-content/uploads/2022/10/Good-Discord-PFP-03-scaled.webp" alt="dev2"></a>
+        </div>
+
+        <svg id="visual1" class="blobs" viewBox="0 0 900 600" width="780" height="530" xmlns="http://www.w3.org/2000/svg"
+            xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1">
+            <g transform="translate(433.39623583139144 267.91966389233517)">
+                <path id="blob1"
+                    d="M177.8 -152.8C227.8 -127.8 263.9 -63.9 264.1 0.2C264.3 64.3 228.7 128.7 178.7 170.4C128.7 212 64.3 231 -0.2 231.2C-64.8 231.5 -129.6 213 -172.8 171.3C-216 129.6 -237.5 64.8 -229.1 8.4C-220.7 -48.1 -182.5 -96.2 -139.3 -121.2C-96.2 -146.2 -48.1 -148.1 7.9 -156C63.9 -163.9 127.8 -177.8 177.8 -152.8"
+                    fill="#BB004B"></path>
+            </g>
+            <g transform="translate(440.5473339343684 278.8476301705456)" style="visibility: hidden;"><path id="blob2" d="M136.7 -140.6C161.7 -111.7 155.9 -55.9 163.3 7.4C170.7 70.7 191.4 141.4 166.4 177.4C141.4 213.4 70.7 214.7 7.5 207.2C-55.6 199.6 -111.3 183.3 -137.6 147.3C-163.9 111.3 -161 55.6 -156.6 4.4C-152.2 -46.9 -146.5 -93.8 -120.1 -122.6C-93.8 -151.5 -46.9 -162.2 4.5 -166.7C55.9 -171.2 111.7 -169.4 136.7 -140.6" fill="#BB004B"></path></g>
+        </svg>
+
+        <svg id="visual2" class="blobs" viewBox="0 0 900 600" width="780" height="530" xmlns="http://www.w3.org/2000/svg"
+            xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1">
+            <g transform="translate(433.39623583139144 267.91966389233517)">
+                <path id="blob3"
+                    d="M177.8 -152.8C227.8 -127.8 263.9 -63.9 264.1 0.2C264.3 64.3 228.7 128.7 178.7 170.4C128.7 212 64.3 231 -0.2 231.2C-64.8 231.5 -129.6 213 -172.8 171.3C-216 129.6 -237.5 64.8 -229.1 8.4C-220.7 -48.1 -182.5 -96.2 -139.3 -121.2C-96.2 -146.2 -48.1 -148.1 7.9 -156C63.9 -163.9 127.8 -177.8 177.8 -152.8"
+                    fill="#BB004B"></path>
+            </g>
+            <g transform="translate(440.5473339343684 278.8476301705456)" style="visibility: hidden;"><path id="blob4" d="M136.7 -140.6C161.7 -111.7 155.9 -55.9 163.3 7.4C170.7 70.7 191.4 141.4 166.4 177.4C141.4 213.4 70.7 214.7 7.5 207.2C-55.6 199.6 -111.3 183.3 -137.6 147.3C-163.9 111.3 -161 55.6 -156.6 4.4C-152.2 -46.9 -146.5 -93.8 -120.1 -122.6C-93.8 -151.5 -46.9 -162.2 4.5 -166.7C55.9 -171.2 111.7 -169.4 136.7 -140.6" fill="#BB004B"></path></g>
+        </svg>
+
+        <script>
+            const tween1 = KUTE.fromTo(
+                '#blob1',
+                { path: '#blob1' },
+                { path: '#blob2' },
+                { repeat: 999, duration: 3000, yoyo: true }
+            );
+            tween1.start();
+        
+            const tween2 = KUTE.fromTo(
+                '#blob3',
+                { path: '#blob3' },
+                { path: '#blob4' },
+                { repeat: 999, duration: 3000, yoyo: true }
+            );
+            tween2.start();
+        </script>
+          
+
+    </div>
+
+
+</body>
+
+</html>

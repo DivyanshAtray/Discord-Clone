@@ -18,8 +18,47 @@ body{
     
 }
 
+nav{
+    width: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 50px;
+    background-color:rgba(20, 20, 20, 0.918);
+    position: relative;
+    font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+    color: white;
+    font-size: larger;
+    bottom:5px;
+    overflow: hidden;
+    z-index: 100;
+    cursor: pointer;
+}
+
+nav::before {
+    content: ""; /* Creates a pseudo-element */
+    position: absolute;
+    top: 0;
+    left: -100%; /* Starts off-screen on the left */
+    width: 100%;
+    height: 100%;
+    background-color: rgba(3, 131, 216, 0.815); /* Hover color */
+    transition: left 0.5s ease; /* Smooth sliding effect */
+    z-index: -1; /* Places it behind the text */
+}
+
+nav:hover::before {
+    left:  0; /* Slides the pink background in from the left */
+}
+
+nav span {
+    position: relative; /* Keeps text above the pseudo-element */
+    z-index: 1; /* Ensures text stays visible */
+}
+
 .main{
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     height: 100dvh;

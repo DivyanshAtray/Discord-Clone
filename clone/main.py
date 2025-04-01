@@ -1138,6 +1138,10 @@ def edit_profile():
         flash("Profile updated successfully!", "success")
         return redirect('/')
 
+@app.route('/developers', methods=['GET'])
+def developer_page():
+    return render_template('developer.html')
+    
 
 # Register the GIF cropping blueprint
 from .gif_crop import gif_crop_bp
