@@ -1144,15 +1144,18 @@ def developer_page():
     
 
 # Register the GIF cropping blueprint
-from .gif_crop import gif_crop_bp
+from gif_crop import gif_crop_bp
 app.register_blueprint(gif_crop_bp)
 
 
+
+
 if __name__ == '__main__':
-    # For local development
-    socketio.run(app, debug=True, allow_unsafe_werkzeug=True)
+    # host="0.0.0.0" tells Flask to listen to all network interfaces
+    # This is what allows your phone to connect
+    socketio.run(app, host="0.0.0.0", port=5000, debug=True, allow_unsafe_werkzeug=True)
 else:
-    # For Render deployment
+    # This part is for when you eventually deploy to Render
     import os
-    port = int(os.getenv("PORT", 10000))  # Render provides PORT; default to 10000 if not set
+    port = int(os.getenv("PORT", 10000))
     socketio.run(app, host="0.0.0.0", port=port, allow_unsafe_werkzeug=True)

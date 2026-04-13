@@ -1373,7 +1373,7 @@ document.addEventListener("DOMContentLoaded", async function () {
                                 const friendElement = document.createElement("span");
                                 friendElement.setAttribute("data-friend-id", friend);
                                 friendElement.innerHTML = `
-                                    <img class="pfp" src="data:image/jpeg;base64,${friendData.image1}" alt="hehe">
+                                    <img class="pfp" src="data:image/jpeg;base64,${friendData.image1}" alt="/static/default-avatar.png">
                                     ${friendData.username}
                                 `;
 

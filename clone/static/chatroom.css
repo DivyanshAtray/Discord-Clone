@@ -34,29 +34,29 @@
 }
 
 
+/* Target the scrollbar itself */
 ::-webkit-scrollbar {
-    width: 8px; /* Width of vertical scrollbar */
-    height: 8px; /* Height of horizontal scrollbar */
-    border-radius: 100%;
+    width: 8px;
+    height: 8px;
 }
 
-/* Track (background of scrollbar) */
+/* Make the background line invisible */
 ::-webkit-scrollbar-track {
-    background: #2f3136; /* Dark background */
-    border-radius: 10px;
+    background: transparent; 
 }
 
-/* Handle (scroll thumb) */
+/* Style the tiny bar */
 ::-webkit-scrollbar-thumb {
-    background: #5865F2; /* Discord-like blue */
+    background: #2c3030; 
     border-radius: 10px;
+    /* Put the transition here for it to work smoothly */
+    transition: background 0.3s ease; 
 }
 
-/* Handle on hover */
+/* Hover effect */
 ::-webkit-scrollbar-thumb:hover {
-    background: #4752C4;
+    background: #047f83; 
 }
-
 
 
 /* Hide number input arrows in Chrome, Safari, Edge, and Opera */
@@ -73,10 +73,6 @@
 
 
 /* Optional: Scrollbar for Firefox */
-* {
-    scrollbar-width: thin;
-    scrollbar-color: #5865F2 #2f3136;
-}
 
 
 .main{
@@ -148,13 +144,14 @@
     display: flex;
     align-items: center;
     height: 60px;
-    font-size: medium;
-    font-weight: 500;
+    font-family: "Press Start 2P", system-ui;
+    font-weight: 400;
+    font-style: normal;
 }
 
 span:hover{
     cursor: pointer;
-    background-color: #404249;
+    background-color: #17065a;
     border-radius: 5px;
     transition: ease-in-out 0.3s;
 }
@@ -200,10 +197,11 @@ span:hover{
 .name{
     width: 50%;
     justify-content: flex-start;
+    
 }
 
 .name:hover{
-    background-color: #313338;
+    /* background-color: #313338; */
     border-radius: 0px;
 }
 
@@ -357,6 +355,9 @@ textarea{
     max-height: 30dvh;
     overflow-y: auto;
     z-index: 1000;
+    font-size: larger;
+    color: wheat;
+    font-family: "Raleway", sans-serif;
 }
 
 .popup input {
@@ -546,8 +547,12 @@ textarea{
     background-color: #292b30;
     color: white;
     border-radius: 10px;
-    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
-    font-size: 14px;
+    font-family: "Fira Code", monospace;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
+  
+    font-size: 16px;
     /* overflow-x: scroll; */
 }
 
@@ -555,10 +560,10 @@ textarea{
     flex-direction: row;
     justify-content: space-between;
     align-self: flex-end;
-    background-color: #1c1c1c;
+    background-color: #0c181a;
     min-width:10%;
     max-width:80%;
-    color:white;
+    color:#f38475;
     /* display: flex; */
     
 }
@@ -567,8 +572,8 @@ textarea{
     flex-direction: row;
     justify-content: flex-end;
     align-self: flex-start;
-    background-color: #131418;
-    color: white;
+    background-color: #220906e1;
+    color: #40e6ff;
     min-width:10%;
     max-width:80%;
 }
@@ -709,7 +714,7 @@ span.unread::after {
 .sidebar {
     width: 250px;
     height: 100dvh;
-    background-color: #2f3136;
+    background-color: #04010f;
     position: fixed;
     top: 0;
     left: 0;
@@ -719,7 +724,7 @@ span.unread::after {
 .rightbar {
     width: 350px;
     height: 100dvh;
-    background-color: #2f3136;
+    background-color: #04010f;
     position: fixed;
     top: 0;
     right: 0;
@@ -731,15 +736,15 @@ span.unread::after {
     margin-right: 350px;
     width: calc(100% - 600px);
     height: 100dvh;
-    background-color: #36393f;
+    background-color: #0f0f0f;
     position: relative;
 }
 
 .rightbar p{
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    font-weight: 500;
-    font-size: large;
-    background: linear-gradient(to right, #facb31, #f67629, yellow, rgb(179, 255, 0));
+    font-family: "Open Sans", sans-serif;
+    font-weight: 600;
+    font-size: larger;
+    background: linear-gradient(to right, #e0840a, #20f7da);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       /* -webkit-text-stroke: 2px white;  */
@@ -883,6 +888,10 @@ span.unread::after {
     .rightbar.open {
         transform: translateX(0); /* Slide rightbar into view */
     }
+
+    .top{
+        justify-content: space-between;
+    }
 }
 
 /* Overlay for the background when sidebar or rightbar is open */
@@ -981,8 +990,8 @@ span.unread::after {
 }
 
 .loading-overlay video {
-    max-width: 300px; /* Adjust size as needed */
-    max-height: 300px;
+    max-width: 600px; /* Adjust size as needed */
+    max-height: 600px;
     object-fit: contain; /* Ensure the video fits within the container */
 }
 

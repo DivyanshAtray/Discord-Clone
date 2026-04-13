@@ -2,8 +2,10 @@
 <html lang="en">
 {% set friend_id = friend_id | string %} {# Convert friend_id to a string #}
 {% set friend = friends_data | selectattr("id", "equalto", friend_id) | first %}
-{% set friend_name = friend.username if friend else "Unknown" %}
-{% set friend_pfp = friend.pfp if friend else "Unknown" %}
+{% set friend_name = friend.username if friend else "Welcome!" %}
+{% set friend_pfp = friend.pfp if (friend and friend.pfp) else None %}
+{% set friend_pfp_format = friend.image1_format if (friend and friend.image1_format) else 'png' %}
+
 
 
 <head>
@@ -21,6 +23,18 @@
 
     <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=send" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Playwrite+IE:wght@100..400&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Playwrite+IE:wght@100..400&family=Press+Start+2P&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet">
 
     <script defer src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
     <script defer id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
@@ -56,11 +70,11 @@
 
         <div class="chat">
             <div class="top">
-                <span class="name"><img class="pfp"
-                        src="{% if friend_pfp %}data:image/jpeg;base64,{{ friend_pfp }}{% else %}/static/default-avatar.png{% endif %}"
-                        alt="">
+                <span class="name">
+                    <img class="pfp"
+                        src="{% if friend_pfp and friend_pfp != 'None' %}data:image/{{ friend_pfp_format or 'png' }};base64,{{ friend_pfp }}{% else %}{{ url_for('static', filename='default-avatar.png') }}{% endif %}"
+                        alt="Profile Picture">
                     {{ friend_name }}
-
                 </span>
 
                 <div class="icons">
@@ -121,10 +135,10 @@
                     src="{% if friend_pfp %}data:image/jpeg;base64,{{ friend_pfp }}{% else %}/static/default-avatar.png{% endif %}"
                     alt="Friend's PFP">
                 <img class="friend-banner"
-                    src="{% if friend_banner %}data:image/jpeg;base64,{{ friend_banner }}{% else %}/static/default-banner.png{% endif %}"
+                    src="{% if friend_banner %}data:image/jpeg;base64,{{ friend_banner }}{% else %}/static/default-banner.jpg{% endif %}"
                     alt="Friend's Banner">
                 <p>{{ friend_name }}</p>
-                <p>#{{ friend_id }}</p>
+                <p>User ID: #{{ friend_id }}</p>
             </div>
             <hr>
             <div class="user-info">
@@ -133,10 +147,10 @@
                     src="{% if user_pfp %}data:image/jpeg;base64,{{ user_pfp }}{% else %}/static/default-avatar.png{% endif %}"
                     alt="User's PFP">
                 <img class="user-banner"
-                    src="{% if user_banner %}data:image/jpeg;base64,{{ user_banner }}{% else %}/static/default-banner.png{% endif %}"
+                    src="{% if user_banner %}data:image/jpeg;base64,{{ user_banner }}{% else %}/static/default-banner.jpg{% endif %}"
                     alt="User's Banner">
                 <p>{{ user_name }}</p>
-                <p>#{{ user_id }}</p>
+                <p>User ID: #{{ user_id }}</p>
                 <div class="edit-profile-btn" onclick="window.location.href='/edit_profile'">Edit Profile</div>
             </div>
         </div>
