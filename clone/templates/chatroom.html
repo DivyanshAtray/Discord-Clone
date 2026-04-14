@@ -114,8 +114,19 @@
                 <!-- Messages will be loaded here -->
             </div>
             <div class="inputbar">
-                <form id="message-form" action="/send_message" method="POST" enctype="multipart/form-data">
+                <form id="message-form" action="/send_message" method="POST" enctype="multipart/form-data" onsubmit="return false;">
                     <input type="hidden" name="friend_id" value="{{ friend_id }}">
+                    
+                    <div id="uploadProgressContainer" style="display: none; padding: 10px; background: #1e1f22; border-radius: 8px; margin-bottom: 10px; width: 100%; box-sizing: border-box; border: 1px solid #333;">
+                        <div style="width: 100%; height: 6px; background: #2c3030; border-radius: 10px; overflow: hidden;">
+                            <div id="progressBarThumb" style="width: 0%; height: 100%; background: #047f83; transition: width 0.1s ease;"></div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 5px; font-size: 11px; color: #888; font-family: sans-serif;">
+                            <span id="uploadFileName">Uploading file...</span>
+                            <span id="uploadPercentage">0%</span>
+                        </div>
+                    </div>
+
                     <div class="reply-preview" id="replyPreview" style="display: none;">
                         <span>Replying to&nbsp<span id="replyToUsername"></span></span>
                         <p id="replyMessageText"></p>

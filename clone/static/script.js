@@ -235,14 +235,39 @@ function escapeHtml(text) {
 function renderAttachment(fileLocation) {
     if (!fileLocation) return null;
 
-    const link = document.createElement("a");
-    link.href = `/uploads/${fileLocation}`;
-    link.target = "_blank"; // Open in a new tab
-    link.classList.add("download-link");
-    link.textContent = `/uploads/${fileLocation}`; // Display only the raw link URL
-    console.log("renderAttachment: Generated link text:", link.textContent); // Debug log
+    const ext = fileLocation.split('.').pop().toLowerCase();
+    const url = `/uploads/${fileLocation}`;
 
-    return link; // Return the <a> element directly
+    // Create a container for the aesthetic embed
+    const container = document.createElement("div");
+    container.className = "aesthetic-embed-wrapper";
+    container.style.marginTop = "8px";
+
+    // 1. Image Embed
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+        container.innerHTML = `<img src="${url}" style="max-width: 300px; max-height: 300px; border-radius: 8px; border: 1px solid #333; display: block;">`;
+    } 
+    // 2. Video Embed
+    else if (['mp4', 'webm', 'mov'].includes(ext)) {
+        container.innerHTML = `<video controls style="max-width: 300px; max-height: 300px; border-radius: 8px; border: 1px solid #333;"><source src="${url}"></video>`;
+    } 
+    // 3. Audio Embed
+    else if (['mp3', 'wav', 'ogg'].includes(ext)) {
+        container.innerHTML = `<div style="background: #1e1f22; padding: 10px; border-radius: 8px; width: fit-content; display: flex; align-items: center;"><audio controls style="height: 35px;"><source src="${url}"></audio></div>`;
+    } 
+    // 4. PDF/Document Embed
+    else {
+        container.innerHTML = `
+            <div style="background: #2b2d31; padding: 12px; border-radius: 8px; display: flex; align-items: center; gap: 12px; border: 1px solid #1e1f22; max-width: 300px;">
+                <div style="font-size: 24px;">📄</div>
+                <div style="flex-grow: 1; overflow: hidden;">
+                    <div style="color: #dbdee1; font-weight: 500; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; overflow: hidden;">${fileLocation}</div>
+                    <a href="${url}" target="_blank" style="color: #00a8fc; text-decoration: none; font-size: 12px;">Download</a>
+                </div>
+            </div>`;
+    }
+
+    return container; // Returns the beautiful HTML element instead of a link!
 }
 
 
@@ -435,12 +460,14 @@ async function sendMessage() {
         messageContent.appendChild(messageTextDiv);
     }
 
-    // Add a placeholder div for the attachment (if any)
+   // Add a placeholder div for the attachment (if any)
     let attachmentDiv = null;
     if (selectedFile) {
         attachmentDiv = document.createElement("div");
-        attachmentDiv.classList.add("attachment");
-        attachmentDiv.innerHTML = `<span>Uploading ${selectedFile.name}...</span>`;
+        // Use a unique name like 'embed-container' to avoid icon CSS conflicts
+        attachmentDiv.classList.add("embed-container"); 
+        attachmentDiv.style.marginTop = "10px";
+        attachmentDiv.innerHTML = `<span style="font-size: 12px; color: #aaa;">Uploading ${selectedFile.name}...</span>`;
         messageContent.appendChild(attachmentDiv);
     }
 
@@ -499,12 +526,55 @@ async function sendMessage() {
 
     let messageId, serverTimestamp, fileLocation;
     try {
-        console.log("sendMessage: Sending POST to /send_message...");
-        const response = await fetch("/send_message", {
-            method: "POST",
-            body: formData,
+        console.log("sendMessage: Sending POST to /send_message via XHR for progress...");
+        
+        // Upgraded to XMLHttpRequest to capture live upload progress!
+        const data = await new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            const progressContainer = document.getElementById('uploadProgressContainer');
+            const thumb = document.getElementById('progressBarThumb');
+            const percentText = document.getElementById('uploadPercentage');
+            const fileNameText = document.getElementById('uploadFileName');
+            
+            xhr.open('POST', '/send_message');
+            
+            // Only show progress bar if there is a file attached
+            if (selectedFile && progressContainer) {
+                progressContainer.style.display = 'block';
+                fileNameText.textContent = `Uploading ${selectedFile.name}...`;
+                thumb.style.width = '0%';
+                percentText.textContent = '0%';
+                
+                xhr.upload.onprogress = (e) => {
+                    if (e.lengthComputable) {
+                        const percent = Math.round((e.loaded / e.total) * 100);
+                        thumb.style.width = percent + '%';
+                        percentText.textContent = percent + '%';
+                    }
+                };
+            }
+            
+            xhr.onload = () => {
+                // Hide progress bar when done
+                if (progressContainer) {
+                    setTimeout(() => { progressContainer.style.display = 'none'; }, 500);
+                }
+                
+                if (xhr.status === 200) {
+                    try {
+                        resolve(JSON.parse(xhr.responseText));
+                    } catch(err) {
+                        reject("Failed to parse JSON");
+                    }
+                } else {
+                    reject(`Server returned ${xhr.status}`);
+                }
+            };
+            
+            xhr.onerror = () => reject("Network error occurred");
+            xhr.send(formData);
         });
-        const data = await response.json();
+        
         console.log("sendMessage: Received response from /send_message:", data);
 
         if (data.status === "success") {
@@ -521,22 +591,23 @@ async function sendMessage() {
 
             // Update the attachment with the server-side file location
             if (fileLocation && attachmentDiv) {
-                console.log("sendMessage: Rendering attachment for file_location:", fileLocation);
-                const attachment = renderAttachment(fileLocation);
+                console.log("sendMessage: Rendering aesthetic embed for file_location:", fileLocation);
+                const attachment = renderAttachment(fileLocation); // Use the new function we created
+                
                 if (attachment) {
                     attachmentDiv.innerHTML = ""; // Clear the "Uploading..." text
                     attachmentDiv.appendChild(attachment);
-                    // Use requestAnimationFrame to ensure the DOM update is applied
-                    requestAnimationFrame(() => {
-                        attachmentDiv.style.display = "block"; // Ensure visibility
-                    });
+                    
+                    // CRUCIAL: Change to block so the image/video isn't squashed
+                    attachmentDiv.style.display = "block"; 
+                    messageContent.style.display = "block"; 
+                    
+                    // Small delay to allow the image/video to render before scrolling
+                    setTimeout(scrollToBottom, 100);
                 } else {
-                    console.error("sendMessage: Failed to render attachment for file_location:", fileLocation);
-                    attachmentDiv.remove(); // Remove the attachment div if rendering fails
+                    console.error("sendMessage: Failed to render attachment");
+                    attachmentDiv.remove();
                 }
-            } else if (attachmentDiv) {
-                console.warn("sendMessage: No file_location received, removing attachment div");
-                attachmentDiv.remove(); // Remove the attachment div if no file location is returned
             }
 
             // Sort the message based on message ID
@@ -784,19 +855,19 @@ socket.on("broadcast_message", async (data) => {
 
     // Render the attachment as a child element
     if (fileLocation) {
-        console.log("broadcast_message: Rendering attachment for file_location:", fileLocation);
-        const attachment = renderAttachment(fileLocation);
-        if (attachment) {
-            messageContent.appendChild(attachment);
-            // Use requestAnimationFrame to ensure the DOM update is applied
-            requestAnimationFrame(() => {
-                messageContent.style.display = "flex"; // Ensure visibility
-            });
-        } else {
-            console.error("broadcast_message: Failed to render attachment for file_location:", fileLocation);
+        console.log("broadcast_message: Rendering Real-time Aesthetic Embed...");
+        
+        // This calls the upgraded function we created in the previous step
+        const embedElement = renderAttachment(fileLocation);
+        
+        if (embedElement) {
+            // Force the message container to be block so embeds stack nicely
+            messageContent.style.display = "block"; 
+            messageContent.appendChild(embedElement);
+            
+            // FIX: Use your existing scrollToBottom function instead of looking for a missing ID
+            setTimeout(scrollToBottom, 100);
         }
-    } else {
-        console.warn("broadcast_message: No file_location in broadcast data");
     }
 
     // Render the message text
@@ -1573,6 +1644,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const swipeThreshold = 30;
     const edgeThreshold = 100;
 
+    const fileInput = document.getElementById('file-input');
+    if (fileInput) {
+        fileInput.addEventListener('change', function() {
+            if (this.files[0]) {
+                uploadFileWithProgress(this.files[0]);
+                this.value = ""; // Clear the input so you can upload the same file again if needed
+            }
+        });
+    }
+
+
     // Toggle sidebar (for hamburger icon click)
     function toggleSidebar() {
         console.log('Toggling sidebar');
@@ -1693,3 +1775,71 @@ document.addEventListener('DOMContentLoaded', () => {
         rightbar.addEventListener('touchstart', (e) => e.stopPropagation());
     }
 });
+
+
+// --- SENIOR ENGINEER ADDITION: SMART EMBED GENERATOR ---
+function getAestheticEmbed(filename) {
+    if (!filename) return "";
+    const ext = filename.split('.').pop().toLowerCase();
+    const url = `/uploads/${filename}`;
+
+    // 1. Image Embed
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+        return `<div class="embed-container"><img src="${url}" class="embed-img" style="max-width: 100%; border-radius: 8px; margin-top: 8px; border: 1px solid #333;"></div>`;
+    }
+    // 2. Video Embed
+    if (['mp4', 'webm'].includes(ext)) {
+        return `<div class="embed-container"><video controls style="max-width: 100%; border-radius: 8px; margin-top: 8px;"><source src="${url}"></video></div>`;
+    }
+    // 3. Audio Embed (Minimalist Bar)
+    if (['mp3', 'wav', 'ogg'].includes(ext)) {
+        return `<div class="audio-embed" style="background: #1e1f22; padding: 10px; border-radius: 8px; margin-top: 8px; display: flex; align-items: center; width: fit-content;">
+                    <audio controls style="height: 35px;"><source src="${url}"></audio>
+                </div>`;
+    }
+    // 4. PDF/Document Embed (Professional Box)
+    return `<div class="file-embed" style="background: #2b2d31; padding: 12px; border-radius: 8px; margin-top: 8px; display: flex; align-items: center; gap: 12px; border: 1px solid #1e1f22;">
+                <div style="font-size: 24px;">📄</div>
+                <div style="flex-grow: 1;">
+                    <div style="color: #dbdee1; font-weight: 500; font-size: 14px;">${filename}</div>
+                    <a href="${url}" target="_blank" style="color: #00a8fc; text-decoration: none; font-size: 12px;">Download File</a>
+                </div>
+            </div>`;
+}
+
+// --- SENIOR ENGINEER ADDITION: ASYNC UPLOAD WITH PROGRESS ---
+function uploadFileWithProgress(file) {
+    const friendId = new URLSearchParams(window.location.search).get('friend_id');
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('friend_id', friendId);
+
+    const xhr = new XMLHttpRequest();
+    const container = document.getElementById('uploadContainer'); // We will add this to HTML next
+    const thumb = document.getElementById('progressBarThumb');
+    const percentText = document.getElementById('uploadPercentage');
+
+    // Show the bar
+    container.style.display = 'block';
+
+    xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+            const percent = Math.round((e.loaded / e.total) * 100);
+            thumb.style.width = percent + '%';
+            percentText.innerText = percent + '%';
+        }
+    };
+
+    xhr.onload = () => {
+        if (xhr.status === 200) {
+            // Hide after 1 second so user sees it hit 100%
+            setTimeout(() => { 
+                container.style.display = 'none'; 
+                thumb.style.width = '0%'; 
+            }, 1000);
+        }
+    };
+
+    xhr.open('POST', '/send_message');
+    xhr.send(formData);
+}
