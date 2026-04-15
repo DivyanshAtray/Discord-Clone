@@ -1004,3 +1004,61 @@ span.unread::after {
 
 
 
+/* Ensure the modal container is a flexbox that centers everything */
+.media-modal {
+    display: none;
+    position: fixed;
+    inset: 0; /* Modern way to say top, left, right, bottom: 0 */
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+/* The wrapper that holds the image */
+.modal-content-wrapper {
+    position: relative;
+    max-width: 95vw;
+    max-height: 95vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: auto; /* Allows scrolling if you zoom in deep */
+}
+
+/* Default state for image/video in modal */
+#modalMediaContainer img, 
+#modalMediaContainer video {
+    max-width: 100%;
+    max-height: 90vh;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 4px;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: zoom-in; /* Shows the user they can zoom */
+}
+
+/* Zoomed-in state */
+#modalMediaContainer img.zoomed {
+    transform: scale(2); /* Zoom factor */
+    cursor: zoom-out;
+}
+
+@media (max-width: 768px) {
+    .media-modal {
+        padding: 10px;
+    }
+    
+    #modalMediaContainer img.zoomed {
+        transform: scale(1.5); /* Smaller zoom for small screens to avoid weird clipping */
+    }
+    
+    .close-modal {
+        top: 10px;
+        right: 20px;
+        font-size: 30px;
+    }
+}

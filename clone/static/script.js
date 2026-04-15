@@ -250,13 +250,13 @@ function renderAttachment(fileLocation) {
     container.className = "aesthetic-embed-wrapper";
     container.style.marginTop = "8px";
 
-    // 1. Image Embed
+    // 1. Image Embed (NOW WITH ONCLICK MODAL!)
     if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
-        container.innerHTML = `<img src="${url}" style="max-width: 300px; max-height: 300px; border-radius: 8px; border: 1px solid #333; display: block;">`;
+        container.innerHTML = `<img src="${url}" onclick="openMediaModal('${url}', 'image')" style="max-width: 300px; max-height: 300px; border-radius: 8px; border: 1px solid #333; display: block; cursor: zoom-in;">`;
     } 
-    // 2. Video Embed
+    // 2. Video Embed (NOW WITH ONCLICK MODAL!)
     else if (['mp4', 'webm', 'mov'].includes(ext)) {
-        container.innerHTML = `<video controls style="max-width: 300px; max-height: 300px; border-radius: 8px; border: 1px solid #333;"><source src="${url}"></video>`;
+        container.innerHTML = `<video src="${url}" onclick="openMediaModal('${url}', 'video')" style="max-width: 300px; max-height: 300px; border-radius: 8px; border: 1px solid #333; cursor: zoom-in;"></video>`;
     } 
     // 3. Audio Embed
     else if (['mp3', 'wav', 'ogg'].includes(ext)) {
@@ -274,7 +274,7 @@ function renderAttachment(fileLocation) {
             </div>`;
     }
 
-    return container; // Returns the beautiful HTML element instead of a link!
+    return container;
 }
 
 
@@ -1897,4 +1897,55 @@ function uploadFileWithProgress(file) {
 
     xhr.open('POST', '/send_message');
     xhr.send(formData);
+}
+
+
+
+
+function openMediaModal(src, type) {
+    const modal = document.getElementById("mediaModal");
+    const container = document.getElementById("modalMediaContainer");
+    if (!modal || !container) return;
+
+    container.innerHTML = ""; 
+
+    if (type === 'image') {
+        const img = document.createElement("img");
+        img.src = src;
+        
+        // --- ZOOM LOGIC ---
+        img.onclick = (e) => {
+            e.stopPropagation(); // Prevents the modal from closing when clicking the image
+            img.classList.toggle('zoomed');
+            
+            // If zoomed, we center the view on the click point
+            if (img.classList.contains('zoomed')) {
+                container.style.overflow = "auto";
+            } else {
+                container.style.overflow = "hidden";
+            }
+        };
+
+        container.appendChild(img);
+    } 
+    else if (type === 'video') {
+        const video = document.createElement("video");
+        video.src = src;
+        video.controls = true;
+        video.autoplay = true;
+        // Videos usually don't need "toggle zoom", just responsive sizing
+        container.appendChild(video);
+    }
+
+    modal.style.display = "flex";
+}
+
+function closeMediaModal() {
+    const modal = document.getElementById("mediaModal");
+    const container = document.getElementById("modalMediaContainer");
+    if (modal) modal.style.display = "none";
+    if (container) {
+        container.innerHTML = ""; 
+        container.style.overflow = "hidden"; // Reset overflow
+    }
 }
