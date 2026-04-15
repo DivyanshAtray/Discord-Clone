@@ -784,7 +784,13 @@ def send_message():
         'message_id': message_id
     })
 
-    return jsonify({"status": "success", "message_id": message_id, "timestamp": timestamp})
+    # Return full data so sender's optimistic UI + broadcast both get file_location
+    return jsonify({
+        "status": "success",
+        "message_id": message_id,
+        "timestamp": timestamp,
+        "file_location": file_location   # ← This was the missing piece
+    })
 
 @app.route('/mark_messages_seen', methods=['POST'])
 def mark_messages_seen():

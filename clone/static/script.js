@@ -1,5 +1,12 @@
 const friendId = new URLSearchParams(window.location.search).get('friend_id');
 
+// State Variables for Pagination & Loading
+let messageOffset = 0;
+let isLoadingMessages = false;
+let allMessagesLoaded = false;
+let messagesLoaded = false;
+let friendsLoaded = false; // Add this if you use the checkLoadingComplete function
+
 // Function to fetch the username and user ID and save them as cookies
 async function fetchAndSaveUsername() {
     try {
@@ -786,6 +793,53 @@ socket.on("broadcast_message", async (data) => {
         return;
     }
 
+
+    // ==================== SENDER FALLBACK (optimistic UI fix) ====================
+    if (isUserMessage) {
+        console.log("broadcast_message: Updating sender's optimistic message");
+
+        // Look for the optimistic message by the temporary class OR the messageId
+        const existingMessage = messagesContainer.querySelector(".temporary-sending") || 
+                                messagesContainer.querySelector(".pending-attachment") ||
+                                messagesContainer.querySelector(`[data-message-id="${messageId}"]`);
+
+        if (existingMessage) {
+            // 1. Give it the real DB message ID so future replies work
+            existingMessage.dataset.messageId = messageId;
+            existingMessage.classList.remove("temporary-sending", "pending-attachment");
+
+            // 2. Render the aesthetic embed
+            if (fileLocation) {
+                let attachmentDiv = existingMessage.querySelector(".embed-container");
+                
+                // If no placeholder existed, create one
+                if (!attachmentDiv) {
+                    attachmentDiv = document.createElement("div");
+                    attachmentDiv.classList.add("embed-container");
+                    const msgContent = existingMessage.querySelector(".message-content");
+                    if (msgContent) msgContent.appendChild(attachmentDiv);
+                }
+
+                const attachment = renderAttachment(fileLocation);
+                if (attachment) {
+                    attachmentDiv.innerHTML = "";
+                    attachmentDiv.appendChild(attachment);
+                    attachmentDiv.style.display = "block";
+                }
+            }
+            
+            const messageContent = existingMessage.querySelector(".message-content");
+            if (messageContent) messageContent.style.display = "block";
+
+            scrollToBottom();
+            renderLatex();
+            return; // Successfully updated, stop here so we don't duplicate
+        }
+        
+        // CRITICAL FIX: If existingMessage wasn't found, DO NOT return!
+        // Let the normal script below run so the message still renders as a fallback.
+    }
+
     console.log("broadcast_message: Rendering friend’s message from:", username);
 
     const messageDiv = document.createElement("div");
@@ -829,6 +883,7 @@ socket.on("broadcast_message", async (data) => {
     if (!seen) {
         fetchUnreadCounts();
     }
+
     const messageContent = document.createElement("div");
     messageContent.classList.add("message-content");
 
