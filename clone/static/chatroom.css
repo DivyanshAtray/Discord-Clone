@@ -1,21 +1,32 @@
-*{
+* {
     padding: 0;
     margin: 0;
 }
 
 .replied-message .reply-label,
 .reply-preview .reply-label {
-    margin-top: 0 !important; /* Forcefully override the 20px margin */
-    margin: 0 !important; /* Reset all margins */
-    padding: 0 !important; /* Reset padding */
-    color: #b9bbbe !important; /* Match the color of replied-message */
-    font-family: "Noto Sans", sans-serif !important; /* Keep consistent font */
-    display: inline !important; /* Ensure inline behavior instead of flex */
-    align-items: normal !important; /* Reset align-items from flex */
-    height: auto !important; /* Reset height to avoid fixed sizing */
-    font-size: 0.9em !important; /* Match the parent font size */
-    font-weight: normal !important; /* Reset to normal weight */
-    line-height: 1; /* Ensure consistent line height */
+    margin-top: 0 !important;
+    /* Forcefully override the 20px margin */
+    margin: 0 !important;
+    /* Reset all margins */
+    padding: 0 !important;
+    /* Reset padding */
+    color: #b9bbbe !important;
+    /* Match the color of replied-message */
+    font-family: "Noto Sans", sans-serif !important;
+    /* Keep consistent font */
+    display: inline !important;
+    /* Ensure inline behavior instead of flex */
+    align-items: normal !important;
+    /* Reset align-items from flex */
+    height: auto !important;
+    /* Reset height to avoid fixed sizing */
+    font-size: 0.9em !important;
+    /* Match the parent font size */
+    font-weight: normal !important;
+    /* Reset to normal weight */
+    line-height: 1;
+    /* Ensure consistent line height */
 }
 
 /* Style for replied message */
@@ -28,9 +39,12 @@
     font-size: 0.9em;
     color: #b9bbbe;
     display: flex;
-    flex-wrap: nowrap; /* Prevent wrapping */
-    align-items: center; /* Vertically center the content */
-    gap: 5px; /* Add space between "Replying to" and username */
+    flex-wrap: nowrap;
+    /* Prevent wrapping */
+    align-items: center;
+    /* Vertically center the content */
+    gap: 5px;
+    /* Add space between "Replying to" and username */
 }
 
 
@@ -42,25 +56,25 @@
 
 /* Make the background line invisible */
 ::-webkit-scrollbar-track {
-    background: transparent; 
+    background: transparent;
 }
 
 /* Style the tiny bar */
 ::-webkit-scrollbar-thumb {
-    background: #2c3030; 
+    background: #2c3030;
     border-radius: 10px;
     /* Put the transition here for it to work smoothly */
-    transition: background 0.3s ease; 
+    transition: background 0.3s ease;
 }
 
 /* Hover effect */
 ::-webkit-scrollbar-thumb:hover {
-    background: #047f83; 
+    background: #047f83;
 }
 
 
 /* Hide number input arrows in Chrome, Safari, Edge, and Opera */
-#friendIdInput::-webkit-inner-spin-button, 
+#friendIdInput::-webkit-inner-spin-button,
 #friendIdInput::-webkit-outer-spin-button {
     -webkit-appearance: none;
     margin: 0;
@@ -75,12 +89,12 @@
 /* Optional: Scrollbar for Firefox */
 
 
-.main{
+.main {
     display: flex;
     flex-direction: row;
 }
 
-.sidebar{
+.sidebar {
     height: 100dvh;
     /* width: 25vw; */
     background-color: #2b2d31;
@@ -90,7 +104,7 @@
     justify-content: space-between;
 }
 
-.sidebar p{
+.sidebar p {
     color: #babcc0;
     font-family: "Noto Sans", sans-serif;
     font-size: small;
@@ -101,8 +115,8 @@
     cursor: pointer;
 }
 
-.dms{
-    
+.dms {
+
     display: flex;
     flex-direction: column;
     height: 95dvh;
@@ -110,7 +124,7 @@
     /* justify-content: space-around; */
 }
 
-.logout{
+.logout {
     height: 50px;
     width: 100%;
     display: flex;
@@ -118,13 +132,14 @@
     align-items: center;
     justify-content: center;
 }
-.logout_icon{
+
+.logout_icon {
     width: 35px;
     height: auto;
     cursor: pointer;
 }
 
-.sidebar span{
+.sidebar span {
     margin-top: 20px;
     color: #babcc0;
     padding-left: 20px;
@@ -136,7 +151,7 @@
     font-weight: 500;
 }
 
-.top span{
+.top span {
     margin-top: 20px;
     color: #babcc0;
     padding-left: 20px;
@@ -149,21 +164,21 @@
     font-style: normal;
 }
 
-span:hover{
+span:hover {
     cursor: pointer;
     background-color: #17065a;
     border-radius: 5px;
     transition: ease-in-out 0.3s;
 }
 
-.pfp{
+.pfp {
     width: 40px;
     border-radius: 100%;
     height: 40px;
     margin-right: 20px;
 }
 
-.chat{
+.chat {
     background-color: #313338;
     width: 100vw;
     height: 100dvh;
@@ -173,20 +188,20 @@ span:hover{
     overflow: auto;
 }
 
-.top{
+.top {
     display: flex;
     justify-content: space-evenly;
     width: 100%;
 }
 
-.icons{
+.icons {
     display: flex;
     /* flex-direction: row; */
     width: 25%;
     justify-content: flex-end;
 }
 
-.icon_top{
+.icon_top {
     width: 25px;
     height: auto;
     cursor: pointer;
@@ -194,13 +209,13 @@ span:hover{
     padding-right: 10px;
 }
 
-.name{
+.name {
     width: 50%;
     justify-content: flex-start;
-    
+
 }
 
-.name:hover{
+.name:hover {
     /* background-color: #313338; */
     border-radius: 0px;
 }
@@ -209,11 +224,11 @@ hr {
     border: none;
     height: 1px;
     background-color: rgba(204, 204, 204, 0.541);
-    width:80%;
-   
+    width: 80%;
+
 }
 
-.messages{
+.messages {
     margin-top: 20px;
     height: 80dvh;
     width: 60vw;
@@ -226,7 +241,7 @@ hr {
     margin-left: 30px; */
 }
 
-textarea{
+textarea {
     width: 60vw;
     height: 40px;
     max-height: 200px;
@@ -245,7 +260,7 @@ textarea{
     font-family: "Noto Sans", sans-serif;
 }
 
-.inputbar{
+.inputbar {
     margin-top: 20px;
     display: flex;
     align-items: center;
@@ -265,7 +280,7 @@ textarea{
     cursor: pointer;
 }
 
-.attachment{
+.attachment {
     color: #dadada;
     position: absolute;
     right: 55px;
@@ -321,6 +336,7 @@ textarea{
         opacity: 0;
         transform: translateY(10px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -369,12 +385,12 @@ textarea{
     z-index: 1000;
 }
 
-.friend_id{
+.friend_id {
     width: 30px;
     height: auto;
 }
 
-.background{
+.background {
     margin-top: 10px;
     margin-left: 40%;
     width: 100%;
@@ -384,11 +400,12 @@ textarea{
     height: 40px;
     background-color: #4752C4;
     border-radius: 100%;
-    &:hover{
+
+    &:hover {
         background-color: #404249;
         border-radius: 5px;
         transition: ease-in-out 0.4s;
-        }
+    }
 }
 
 
@@ -423,25 +440,26 @@ textarea{
     background: none;
 }
 
-.accept-btn{
+.accept-btn {
     margin-right: 20px;
     cursor: pointer;
     border-radius: 100%;
-    &:hover{
-    background: #555;
-    transition: ease-in-out 0.3s;
+
+    &:hover {
+        background: #555;
+        transition: ease-in-out 0.3s;
     }
 }
 
-.deny-btn{
+.deny-btn {
     margin-left: 20px;
     cursor: pointer;
-    
-    &:hover{
+
+    &:hover {
         background: #555;
         transition: ease-in-out 1s;
         border-radius: 100%;
-        }
+    }
 }
 
 
@@ -461,9 +479,11 @@ textarea{
     cursor: pointer;
     width: 20px;
     height: 20px;
-    margin: 0 5px; /* Space between SVG and content */
+    margin: 0 5px;
+    /* Space between SVG and content */
     transition: opacity 0.3s ease, visibility 0.3s ease;
 }
+
 /* Show reply button on hover with no delay */
 .message:hover .reply-btn {
     opacity: 1;
@@ -485,17 +505,24 @@ textarea{
     cursor: pointer;
     font-size: 0.9em;
     color: #b9bbbe;
-    display: flex; /* Use flexbox for better control */
-    align-items: center; /* Vertically center the content */
+    display: flex;
+    /* Use flexbox for better control */
+    align-items: center;
+    /* Vertically center the content */
 }
 
 /* Style for the username in the reply preview */
 .reply-username {
-    display: inline-block; /* Use inline-block to keep it on the same line while allowing width/height control */
-    font-weight: 600; /* Bold username */
-    color: #ffffff; /* White color for the username */
-    margin-left: 5px; /* Add a small space between "Replying to" and username */
-    white-space: nowrap; /* Prevent the username from wrapping to a new line */
+    display: inline-block;
+    /* Use inline-block to keep it on the same line while allowing width/height control */
+    font-weight: 600;
+    /* Bold username */
+    color: #ffffff;
+    /* White color for the username */
+    margin-left: 5px;
+    /* Add a small space between "Replying to" and username */
+    white-space: nowrap;
+    /* Prevent the username from wrapping to a new line */
 }
 
 /* Ensure the reply preview in the input bar is also aligned */
@@ -529,11 +556,11 @@ textarea{
 
 
 
-#replyToUsername:hover{
-    background:none;    
+#replyToUsername:hover {
+    background: none;
 }
 
-#replyMessageText{
+#replyMessageText {
     display: none;
 }
 
@@ -548,10 +575,10 @@ textarea{
     color: white;
     border-radius: 10px;
     font-family: "Fira Code", monospace;
-  font-optical-sizing: auto;
-  font-weight: 400;
-  font-style: normal;
-  
+    font-optical-sizing: auto;
+    font-weight: 400;
+    font-style: normal;
+
     font-size: 16px;
     /* overflow-x: scroll; */
 }
@@ -561,11 +588,11 @@ textarea{
     justify-content: space-between;
     align-self: flex-end;
     background-color: #0c181a;
-    min-width:10%;
-    max-width:80%;
-    color:#f38475;
+    min-width: 10%;
+    max-width: 80%;
+    color: #f38475;
     /* display: flex; */
-    
+
 }
 
 .bot-message {
@@ -574,15 +601,16 @@ textarea{
     align-self: flex-start;
     background-color: #220906e1;
     color: #40e6ff;
-    min-width:10%;
-    max-width:80%;
+    min-width: 10%;
+    max-width: 80%;
 }
 
 .message-pfp {
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    margin: 0 10px; /* Space between picture and content */
+    margin: 0 10px;
+    /* Space between picture and content */
 }
 
 .message-content {
@@ -606,11 +634,13 @@ textarea{
 }
 
 .user-message .reply-btn {
-    order: -1; /* SVG stays on the left */
+    order: -1;
+    /* SVG stays on the left */
 }
 
 .bot-message .reply-btn {
-    order: 1; /* SVG stays on the right */
+    order: 1;
+    /* SVG stays on the right */
 }
 
 .message:hover .reply-btn {
@@ -632,7 +662,8 @@ textarea{
     margin: 15px 0;
     padding: 8px 0;
     color: #a6a7a9;
-    font-family: 'Arial', sans-serif; /* Decent font */
+    font-family: 'Arial', sans-serif;
+    /* Decent font */
     font-size: small;
     font-weight: 500;
     position: relative;
@@ -666,11 +697,11 @@ span.unread::after {
     flex-direction: column;
 }
 
-.rightbar hr{
+.rightbar hr {
     width: 100%;
 }
 
-.friend-info{
+.friend-info {
     height: 47%;
 }
 
@@ -679,7 +710,8 @@ span.unread::after {
 }
 
 /* Split rightbar into two equal horizontal sections */
-.friend-info, .user-info {
+.friend-info,
+.user-info {
     margin-top: 15px;
     width: 100%;
     padding: 10px;
@@ -693,18 +725,20 @@ span.unread::after {
 }
 
 
-.friend-pfp, .user-pfp {
-    width: 80px; 
+.friend-pfp,
+.user-pfp {
+    width: 80px;
     height: 80px;
     border-radius: 100%;
-    object-fit: cover; 
+    object-fit: cover;
 
 }
 
 
-.friend-banner, .user-banner {
-    width: 100%; 
-    aspect-ratio: 16 / 9; 
+.friend-banner,
+.user-banner {
+    width: 100%;
+    aspect-ratio: 16 / 9;
     object-fit: cover;
     border-radius: 5px;
     margin-top: 10px;
@@ -740,92 +774,216 @@ span.unread::after {
     position: relative;
 }
 
-.rightbar p{
+.rightbar p {
     font-family: "Open Sans", sans-serif;
     font-weight: 600;
     font-size: larger;
     background: linear-gradient(to right, #e0840a, #20f7da);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      /* -webkit-text-stroke: 2px white;  */
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    /* -webkit-text-stroke: 2px white;  */
     letter-spacing: 2px;
     stroke-width: 10px;
 }
 
 
-@media (max-width: 1590px){
-    .rightbar{
+.arrow {
+    padding: 0px;
+    margin: 0;
+    background-color: rgba(61, 59, 59, 0.873);
+    width: 50px;
+    height: 50px;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 120;
+    border-radius: 100%;
+    display: none;
+    touch-action: none;
+    /* Prevents browser interference on mobile */
+    user-select: none;
+    /* Prevents text selection while dragging */
+    -webkit-user-drag: none;
+}
+
+.arrow2 {
+    display: none;
+}
+
+.arrow:hover {
+    background-color: rgba(61, 59, 59, 0.873);
+    border-radius: 100%;
+
+}
+
+.slide{
+    width: 40px;
+    height: auto;
+}
+
+.slide2{
+    width: 40px;
+    height: auto;
+}
+
+@media (max-width: 1590px) {
+    .rightbar {
         width: 300px;
     }
-    .chat{
+
+    .chat {
         margin-right: 250px;
         width: calc(100% - 550px);
     }
 }
 
 
-@media (max-width: 1500px){
-    .chat{
-        width: calc(100% - 510px);
+@media (max-width: 1500px) {
+    .chat {
+        width: calc(100% - 520px);
     }
-    .bot-message{
+
+    .bot-message {
         margin-left: 0px;
     }
-    .user-message{
+
+    .user-message {
         margin-right: 40px;
     }
-    textarea{
+
+    textarea {
         width: 50vw;
     }
 }
 
-@media (max-width: 1275px){
-    .sidebar{
-        width: 240px;
-    }
-    .rightbar{
-        width: 280px;
-    }
-    .chat{
-        width: calc(100% - 490px);
-        margin-left: 240px;
+@media (max-width: 1440px) {
+    .chat {
+        width: calc(100% - 550px);
     }
 }
 
-@media (max-width: 1225px){
-    .sidebar{
+@media (max-width: 1385px) {
+    .chat {
+        width: calc(100% - 550px);
+        overflow-x: hidden;
+    }
+}
+
+@media (max-width: 1275px) {
+    .sidebar {
+        width: 240px
+    }
+
+    .chat {
+        width: calc(100% - 240px);
+        margin-left: 240px;
+        margin-right: 0px;
+    }
+
+    .messages {
+        width: 75vw;
+    }
+
+    .rightbar {
+        position: fixed;
+        right: -300px;
+        /* Start hidden on right */
+        width: 300px;
+        /* height: 100vh; */
+        transition: transform 0.3s ease;
+        z-index: 999;
+    }
+
+    .arrow {
+        display: flex;
+        position: absolute;
+        transform: translateX(96vw);
+        top: 50%;
+        cursor: grab;
+        user-select: none;
+        background-color: #04010f;
+        transition: transform 0.3s ease;
+        /* Animate X slide, but not Y drag */
+        z-index: 1000;
+        touch-action: none;
+    }
+
+    .arrow2 {
+        cursor: grab;
+    }
+
+    .arrow:active {
+        cursor: grabbing;
+    }
+
+    .arrow2:active {
+        cursor: grabbing;
+    }
+
+    .slide,
+    .slide2 {
+        transition: transform 0.3s ease;
+    }
+
+    /* --- RIGHT SIDEBAR OPEN --- */
+    .open-right .rightbar {
+        transform: translateX(-300px);
+        /* Slide left into view */
+    }
+
+    .open-right .arrow {
+        transform: translateX(calc(96vw - 270px));
+    }
+
+    .open-right .slide {
+        transform: rotate(180deg);
+    }
+
+
+}
+
+@media (max-width: 1225px) {
+    .sidebar {
         width: 240px;
     }
-    .rightbar{
-        width: 280px;
-    }
-    .messages{
+
+    .messages {
         width: calc(100% - 20px);
     }
-    .user-message{
+
+    .user-message {
         margin-right: 30px;
     }
 
-    .inputbar{
+    .inputbar {
         margin-right: 30px;
     }
 }
 
-@media (max-width: 1075px){
-    textarea{
+@media (max-width: 1075px) {
+    textarea {
         width: 45vw;
     }
 }
 
-@media (max-width: 950px){
-    .rightbar{
-        display: none;
+@media (max-width: 950px) {
+
+    .arrow {
+
+        transform: translateX(94vw);
     }
-    .chat{
+
+    .open-right .arrow {
+        transform: translateX(calc(94vw - 270px));
+    }
+
+    .chat {
         margin-right: 0px;
         width: calc(100% - 240px);
     }
-    .user-message{
+
+    .user-message {
         margin-right: 10px;
     }
 }
@@ -840,7 +998,8 @@ span.unread::after {
         margin: 0px;
         max-width: 90%;
     }
-    .message-content{
+
+    .message-content {
         max-width: 90%;
         max-height: 400px;
         overflow-x: auto;
@@ -856,40 +1015,111 @@ span.unread::after {
         margin-right: 0 !important;
     }
 
-    .inputbar{
+    .inputbar {
         margin-right: 0px;
     }
 
     .sidebar {
-        width: 300px !important;
         position: fixed;
-        top: 0;
-        left: 0;
-        transform: translateX(-100%); /* Move sidebar off-screen to the left */
-        transition: transform 0.3s ease-in-out !important; /* Smooth animation */
-        z-index: 100;
+        left: -300px;
+        /* Start hidden on left */
+        width: 300px;
+        height: 100vh;
+        transition: transform 0.3s ease;
+        z-index: 999;
     }
 
-    .sidebar.open {
-        transform: translateX(0); /* Slide sidebar into view */
+    .arrow2 {
+        display: flex;
+        position: absolute;
+        transform: translateX(1vw);
+        top: 50%;
+        cursor: grab;
+        user-select: none;
+        background-color: #2d02c8d5;
+        width: 50px;
+        height: 50px;
+        border-radius: 100%;
+        transition: transform 0.3s ease;
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
     }
+
+    .arrow {
+        transform: translateX(93vw);
+    }
+
+    .open-right .arrow {
+        transform: translateX(calc(93vw - 270px));
+    }
+
+    .arrow:active,
+    .arrow2:active {
+        cursor: grabbing;
+    }
+
+    .slide,
+    .slide2 {
+        transition: transform 0.3s ease;
+    }
+
+    /* --- LEFT SIDEBAR OPEN --- */
+    .open-left .sidebar {
+        transform: translateX(300px);
+        /* Slide right into view (Positive 300px) */
+    }
+
+    .open-left .arrow2 {
+        transform: translateX(calc(1vw + 270px));
+    }
+
+    .open-left .slide2 {
+        transform: rotate(360deg);
+    }
+
+
 
     .rightbar {
         width: 300px !important;
         position: fixed;
         top: 0;
-        right: 0;
-        transform: translateX(100%); /* Move rightbar off-screen to the right */
-        transition: transform 0.3s ease-in-out !important; /* Smooth animation */
+        /* right: 0; */
+        transform: translateX(100%);
+        transition: transform 0.3s ease-in-out !important;
         z-index: 100;
         display: flex;
     }
 
-    .rightbar.open {
-        transform: translateX(0); /* Slide rightbar into view */
+
+
+
+
+    .arrow2 {
+        display: flex;
+        position: absolute;
+        transform: translateX(1vw);
+        top: 50%;
+        /* Starting vertical position */
+        cursor: grab;
+        user-select: none;
+        /* Prevents highlighting text while dragging */
+        background-color: #04010f;
+        width: 50px;
+        height: 50px;
+        transform: rotate(180deg);
+
+        border-radius: 100%;
     }
 
-    .top{
+
+
+
+
+
+
+
+    .top {
         justify-content: space-between;
     }
 }
@@ -901,11 +1131,15 @@ span.unread::after {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black */
-    z-index: 99; /* Below sidebar/rightbar but above chat */
-    display: none; /* Hidden by default */
+    background-color: rgba(0, 0, 0, 0.5);
+    /* Semi-transparent black */
+    z-index: 99;
+    /* Below sidebar/rightbar but above chat */
+    display: none;
+    /* Hidden by default */
     opacity: 0;
-    transition: opacity 0.3s ease-in-out; /* Fade animation */
+    transition: opacity 0.3s ease-in-out;
+    /* Fade animation */
 }
 
 /* Show overlay when sidebar or rightbar is open */
@@ -915,7 +1149,10 @@ span.unread::after {
 }
 
 /* Ensure touch events are not blocked */
-.main, .chat, .sidebar, .rightbar {
+.main,
+.chat,
+.sidebar,
+.rightbar {
     touch-action: auto !important;
 }
 
@@ -923,7 +1160,8 @@ span.unread::after {
     display: inline-block;
     margin-top: 10px;
     padding: 8px 16px;
-    background-color: #5865f2; /* Discord-like blue */
+    background-color: #5865f2;
+    /* Discord-like blue */
     color: #fff;
     text-align: center;
     border-radius: 4px;
@@ -933,7 +1171,8 @@ span.unread::after {
 }
 
 .edit-profile-btn:hover {
-    background-color: #4752c4; /* Darker blue on hover */
+    background-color: #4752c4;
+    /* Darker blue on hover */
 }
 
 
@@ -963,15 +1202,17 @@ span.unread::after {
 
 
 .pfp {
-    width: 40px; /* Adjust as needed */
+    width: 40px;
+    /* Adjust as needed */
     height: 40px;
     border-radius: 50%;
     object-fit: cover;
 }
 
 .pfp.online {
-    border: 3px solid #0186dfe1; /* Green border for online users */
-    box-shadow: 0 0 5px rgba(0, 255, 0, 0.5); 
+    border: 3px solid #0186dfe1;
+    /* Green border for online users */
+    box-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
 }
 
 
@@ -982,17 +1223,21 @@ span.unread::after {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.8); /* Semi-transparent black background */
+    background-color: rgba(0, 0, 0, 0.8);
+    /* Semi-transparent black background */
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 9999; /* Ensure it appears above all other content */
+    z-index: 9999;
+    /* Ensure it appears above all other content */
 }
 
 .loading-overlay video {
-    max-width: 600px; /* Adjust size as needed */
+    max-width: 600px;
+    /* Adjust size as needed */
     max-height: 600px;
-    object-fit: contain; /* Ensure the video fits within the container */
+    object-fit: contain;
+    /* Ensure the video fits within the container */
 }
 
 /* Hide the overlay when loading is complete */
@@ -1008,7 +1253,8 @@ span.unread::after {
 .media-modal {
     display: none;
     position: fixed;
-    inset: 0; /* Modern way to say top, left, right, bottom: 0 */
+    inset: 0;
+    /* Modern way to say top, left, right, bottom: 0 */
     background: rgba(0, 0, 0, 0.85);
     backdrop-filter: blur(4px);
     z-index: 9999;
@@ -1025,11 +1271,12 @@ span.unread::after {
     display: flex;
     justify-content: center;
     align-items: center;
-    overflow: auto; /* Allows scrolling if you zoom in deep */
+    overflow: auto;
+    /* Allows scrolling if you zoom in deep */
 }
 
 /* Default state for image/video in modal */
-#modalMediaContainer img, 
+#modalMediaContainer img,
 #modalMediaContainer video {
     max-width: 100%;
     max-height: 90vh;
@@ -1038,12 +1285,14 @@ span.unread::after {
     object-fit: contain;
     border-radius: 4px;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    cursor: zoom-in; /* Shows the user they can zoom */
+    cursor: zoom-in;
+    /* Shows the user they can zoom */
 }
 
 /* Zoomed-in state */
 #modalMediaContainer img.zoomed {
-    transform: scale(2); /* Zoom factor */
+    transform: scale(2);
+    /* Zoom factor */
     cursor: zoom-out;
 }
 
@@ -1051,11 +1300,12 @@ span.unread::after {
     .media-modal {
         padding: 10px;
     }
-    
+
     #modalMediaContainer img.zoomed {
-        transform: scale(1.5); /* Smaller zoom for small screens to avoid weird clipping */
+        transform: scale(1.5);
+        /* Smaller zoom for small screens to avoid weird clipping */
     }
-    
+
     .close-modal {
         top: 10px;
         right: 20px;

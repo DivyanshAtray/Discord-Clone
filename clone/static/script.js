@@ -1949,3 +1949,72 @@ function closeMediaModal() {
         container.style.overflow = "hidden"; // Reset overflow
     }
 }
+
+function setupArrow(arrowElement, toggleClassName) {
+    if (!arrowElement) return;
+
+    let isDragging = false;
+    let startY, initialTop;
+    let moved = false;
+
+    function pointerDown(e) {
+        isDragging = true;
+        moved = false; // Reset the movement flag
+
+        // Pointer events give us the Y coordinate directly for both mouse and touch
+        startY = e.clientY;
+        initialTop = arrowElement.offsetTop;
+
+        // "Capture" the pointer so the browser keeps tracking it even if your finger/mouse moves outside the arrow
+        arrowElement.setPointerCapture(e.pointerId);
+
+        // Turn off transition for instant vertical dragging
+        arrowElement.style.transition = 'none';
+    }
+
+    function pointerMove(e) {
+        if (!isDragging) return;
+
+        const deltaY = e.clientY - startY;
+
+        // If you move more than 5px vertically, it's a drag, not a click
+        if (Math.abs(deltaY) > 5) {
+            moved = true;
+            arrowElement.style.top = `${initialTop + deltaY}px`;
+        }
+    }
+
+    function pointerUp(e) {
+        if (!isDragging) return;
+        isDragging = false;
+
+        // Release the pointer
+        arrowElement.releasePointerCapture(e.pointerId);
+
+        // Turn the transition back on for the horizontal slide
+        arrowElement.style.transition = 'transform 0.3s ease';
+
+        // If we didn't drag vertically, treat it as a click and toggle the menu!
+        if (!moved) {
+            document.body.classList.toggle(toggleClassName);
+        }
+    }
+
+    // Attach Pointer Events (Unifies Mouse & Touch!)
+    arrowElement.addEventListener('pointerdown', pointerDown);
+    arrowElement.addEventListener('pointermove', pointerMove);
+    arrowElement.addEventListener('pointerup', pointerUp);
+    
+    // Safety fallback in case the pointer gets interrupted (like a phone call coming in)
+    arrowElement.addEventListener('pointercancel', pointerUp);
+}
+
+// === INITIALIZE BOTH ARROWS ===
+const arrow1 = document.querySelector('.arrow');
+const arrow2 = document.querySelector('.arrow2');
+
+// Link Arrow 1 to the Right Menu
+setupArrow(arrow1, 'open-right');
+
+// Link Arrow 2 to the Left Menu
+setupArrow(arrow2, 'open-left');
