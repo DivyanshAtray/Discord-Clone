@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,7 +11,8 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet">
 
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 </head>
@@ -29,23 +31,39 @@
     {% endif %}
     {% endwith %}
 
+    <div class="uiverse-midnight-sky">
+        <div class="sky-canvas">
+            <div class="stars stars-1"></div>
+            <div class="stars stars-2"></div>
+            <div class="stars stars-3"></div>
+
+            <div class="meteor m1"></div>
+            <div class="meteor m2"></div>
+            <div class="meteor m3"></div>
+
+            <div class="moon"></div>
+        </div>
+    </div>
+
     <div class="main">
-       <a href="/developers" style="text-decoration: none;" target="_blank"> <nav>Visit Developers &nbsp ⿻</nav></a>
+        <a href="/developers" style="text-decoration: none;" target="_blank">
+            <nav>Visit Developers &nbsp ⿻</nav>
+        </a>
         <div class="box">
             <form id="upload-form" action="/login" method="post" enctype="multipart/form-data">
                 <p>Welcome!</p>
                 <p class="sec">We are excited to see you!</p>
-            
+
                 <label for="username">Username*</label><br>
                 <input type="text" id="username" name="username" required><br><br>
-            
-                <label for="password">Password</label><br>
+
+                <label for="password">Password*</label><br>
                 <div class="password-container">
                     <input type="password" id="password" name="password" required>
                     <span id="togglePassword" class="material-symbols-outlined">visibility</span>
                 </div><br><br>
-            
-            
+
+
                 <button type="submit">Login</button><br>
                 <a href="/signup" style="color: #ca2225;">Don't have an account?</a>
             </form>
@@ -58,7 +76,7 @@
 
         <script> const passwordField = document.getElementById("password");
             const togglePassword = document.getElementById("togglePassword");
-    
+
             togglePassword.addEventListener("click", function () {
                 if (passwordField.type === "password") {
                     passwordField.type = "text";
@@ -69,30 +87,31 @@
                     this.textContent = "visibility";
                     this.style.color = "white";
                 }
-                });
-        setTimeout(() => {
-            document.getElementsByClassName("error").forEach(msg => {
-                msg.remove();
             });
-        }, 3000);
+            setTimeout(() => {
+                document.getElementsByClassName("error").forEach(msg => {
+                    msg.remove();
+                });
+            }, 3000);
 
-        // Reduce opacity when error message appears
-        const errorMsg = document.querySelector(".flash-message.error");
-        const mainContent = document.querySelector(".main");
+            // Reduce opacity when error message appears
+            const errorMsg = document.querySelector(".flash-message.error");
+            const mainContent = document.querySelector(".main");
 
-        if (errorMsg) {
-            mainContent.style.opacity = "0.5";
-        }
-
-        // Restore opacity when error message is dismissed
-        document.addEventListener("click", function (event) {
-            if (errorMsg && !errorMsg.contains(event.target)) {
-                errorMsg.remove();
-                mainContent.style.opacity = "1";
+            if (errorMsg) {
+                mainContent.style.opacity = "0.5";
             }
-        });
-            </script>
+
+            // Restore opacity when error message is dismissed
+            document.addEventListener("click", function (event) {
+                if (errorMsg && !errorMsg.contains(event.target)) {
+                    errorMsg.remove();
+                    mainContent.style.opacity = "1";
+                }
+            });
+        </script>
 
 
 </body>
+
 </html>

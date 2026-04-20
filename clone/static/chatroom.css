@@ -106,7 +106,7 @@
 
 .sidebar p {
     color: #babcc0;
-    font-family: "Noto Sans", sans-serif;
+    font-family:'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
     font-size: small;
     font-weight: 600;
     padding-top: 20px;
@@ -143,7 +143,7 @@
     margin-top: 20px;
     color: #babcc0;
     padding-left: 20px;
-    font-family: "Noto Sans", sans-serif;
+    font-family: "Ubuntu Sans Mono", monospace;
     display: flex;
     align-items: center;
     height: 60px;
@@ -207,6 +207,7 @@ span:hover {
     cursor: pointer;
     padding-left: 10px;
     padding-right: 10px;
+    user-select: none;
 }
 
 .name {
@@ -216,7 +217,7 @@ span:hover {
 }
 
 .name:hover {
-    /* background-color: #313338; */
+    background-color: #0f0f0f;
     border-radius: 0px;
 }
 
@@ -288,6 +289,7 @@ textarea {
     bottom: 0%;
     transform: translateY(-50%);
     cursor: pointer;
+    user-select: none;
 }
 
 
@@ -775,7 +777,8 @@ span.unread::after {
 }
 
 .rightbar p {
-    font-family: "Open Sans", sans-serif;
+    font-family: "Bitcount Grid Double", system-ui;
+  font-optical-sizing: auto;
     font-weight: 600;
     font-size: larger;
     background: linear-gradient(to right, #e0840a, #20f7da);
@@ -1124,6 +1127,30 @@ span.unread::after {
     }
 }
 
+@media screen and (max-height: 720px) {
+    
+    .user-pfp{
+        width: 80px;
+        height: 80px;
+        margin: 0;
+        padding: 0;
+
+    }
+    .user-banner{
+        width: 80%;
+        
+        margin: 0;
+        padding: 0;
+
+    }
+
+    .user-info p{
+        font-size: small;
+    }
+    .friend-info p{
+        font-size: medium;
+    }
+}
 /* Overlay for the background when sidebar or rightbar is open */
 .sidebar-overlay {
     position: fixed;
@@ -1160,21 +1187,18 @@ span.unread::after {
     display: inline-block;
     margin-top: 10px;
     padding: 8px 16px;
-    background-color: #5865f2;
+    background-color: #090a0e;
     /* Discord-like blue */
     color: #fff;
     text-align: center;
-    border-radius: 4px;
+    border-radius: 2px;
     font-size: 14px;
+    font-family:Verdana, Geneva, Tahoma, sans-serif;
     cursor: pointer;
     transition: background-color 0.2s ease;
+      border: 1px dotted #e8e8e8cb; /* thickness, style, and color */
+      cursor: pointer;
 }
-
-.edit-profile-btn:hover {
-    background-color: #4752c4;
-    /* Darker blue on hover */
-}
-
 
 
 
