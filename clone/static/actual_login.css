@@ -67,7 +67,11 @@ nav span {
 .box{
     display: flex;
     justify-content: space-between;
-    background-color: #313338;
+    background: linear-gradient(#212121, #212121) padding-box,
+              linear-gradient(145deg, transparent 80%,#cfcfc8, #e7c817) border-box,
+              linear-gradient(-45deg, transparent 80%,#cfcfc8, #e7c817) border-box;
+  border: 2px solid transparent;
+  box-sizing: border-box;
     color: #b0b6bd;
     font-family: "Noto Sans", sans-serif;
     font-size: medium;
@@ -75,7 +79,7 @@ nav span {
     width: 600px;
     height: auto;
     z-index: 2;
-    box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.651);
+    border-radius: 5px;
 }
 
 form{

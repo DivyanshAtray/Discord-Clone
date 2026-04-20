@@ -1056,6 +1056,138 @@ socket.on("broadcast_message", async (data) => {
     observeUnreadMessages();
 });
 
+socket.on('friend_added', (data) => {
+    console.log("Live friend update received:", data.username);
+
+    // 1. SMART DETECTION: Find the sidebar container automatically
+    // It looks for any existing <a> tag that acts as a friend link, and grabs its parent container.
+    let sidebarContainer = document.querySelector('.friends') || document.querySelector('.sidebar-content');
+    const existingFriendLink = document.querySelector('a[href*="?friend_id="]');
+    
+    if (existingFriendLink) {
+        sidebarContainer = existingFriendLink.parentElement;
+    }
+
+    if (!sidebarContainer) {
+        console.warn("Could not auto-detect sidebar container. Refreshing page as fallback.");
+        window.location.reload(); 
+        return;
+    }
+
+    // 2. Prevent duplicate entries if they are already in the list
+    if (document.querySelector(`a[href*="friend_id=${data.id}"]`)) return;
+
+    // 3. Create the standard link wrapper
+    const friendLink = document.createElement("a");
+    friendLink.href = `/?friend_id=${data.id}`;
+    friendLink.style.textDecoration = "none";
+    
+    // Copy the class name of existing links so it perfectly matches your CSS theme
+    if (existingFriendLink) friendLink.className = existingFriendLink.className;
+
+    // 4. Format the profile picture
+    const pfpSrc = data.pfp ? `data:image/jpeg;base64,${data.pfp}` : '/static/default-avatar.png';
+
+    // 5. Build the visual layout
+    friendLink.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 8px; transition: background 0.2s;">
+            <img src="${pfpSrc}" alt="PFP" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover;">
+            <span style="color: #ffffff; font-weight: 500; font-size: 15px;">${data.username}</span>
+        </div>
+    `;
+
+    // Add a hover effect to mimic standard CSS
+    friendLink.addEventListener('mouseenter', () => friendLink.firstElementChild.style.background = '#3ba55c');
+    friendLink.addEventListener('mouseleave', () => friendLink.firstElementChild.style.background = 'transparent');
+
+    // 6. Prepend adds the new friend to the very top of your sidebar list!
+    sidebarContainer.prepend(friendLink);
+});
+
+socket.on('new_friend_request', (data) => {
+    // 1. Update the hidden list (your existing logic)
+    const friendRequestsList = document.getElementById("friendRequestsList");
+    if (friendRequestsList.innerHTML.includes("No incoming requests")) friendRequestsList.innerHTML = "";
+    
+    const requestElement = document.createElement("div");
+    requestElement.className = "friend-request";
+    requestElement.id = `request_${data.sender_id}`;
+    requestElement.innerHTML = `
+        <span>${data.sender_username}</span>
+        <img class="accept-btn" src="/static/accept.svg" onclick="handleFriendAction('/add_friend', ${data.sender_id}, this.parentElement)">
+        <img class="deny-btn" src="/static/deny.svg" onclick="handleFriendAction('/remove_request', ${data.sender_id}, this.parentElement)">
+    `;
+    friendRequestsList.prepend(requestElement);
+
+    // 2. Create the Android-style Notification Toast
+    const toast = document.createElement("div");
+    toast.className = "friend-noti-toast";
+    toast.style.animation = "slideDown 1s ease forwards";
+    toast.innerHTML = `
+        
+        <div class="friend-noti-toast">
+        <p>You recieved a new friend request!</p>
+        
+        </div>
+    `;
+    document.body.appendChild(toast);
+
+    // 3. The Minimizing Animation Logic
+    setTimeout(() => {
+        const inboxIcon = document.querySelector('.icon_top[src="/static/inbox.svg"]');
+        
+        if (inboxIcon) {
+            // Calculate where the inbox icon is on the screen right now
+            const rect = inboxIcon.getBoundingClientRect();
+            
+            // Move the toast to the icon's position and shrink it
+            toast.style.left = `${rect.left + (rect.width / 2)}px`;
+            toast.style.top = `${rect.top + (rect.height / 2)}px`;
+            toast.classList.add("minimize-to-inbox");
+
+            // Glow the inbox icon when the notification "hits" it
+            setTimeout(() => {
+                inboxIcon.style.filter = "drop-shadow(0px 0px 8px #5865F2)";
+                toast.remove(); // Clean up the element
+            }, 600);
+        } else {
+            // Fallback if icon isn't found
+            toast.style.opacity = "0";
+            setTimeout(() => toast.remove(), 600);
+        }
+
+        if (inboxIcon) {
+        // Add the jiggle class to make it bounce
+        inboxIcon.classList.add("jiggle-animation");}
+        
+    }, 4000); // Wait 4 seconds before minimizing
+});
+
+document.addEventListener("DOMContentLoaded", function() {
+    // 1. Use a more robust selector for the inbox icon
+    const inboxIcon = document.querySelector('img[src*="inbox.svg"]');
+    const friendRequestsList = document.getElementById("friendRequestsList");
+
+    if (inboxIcon && friendRequestsList) {
+        // We use a small timeout to let the page settle
+        setTimeout(() => {
+            // Check if there is a 'friend-request' class anywhere inside that list
+            const hasActualRequests = friendRequestsList.getElementsByClassName("friend-request").length > 0;
+            
+            if (hasActualRequests) {
+                console.log("Requests found! Starting jiggle...");
+                inboxIcon.classList.add("jiggle-animation");
+            }
+        }, 300); // 300ms delay is invisible to users but helps JS catch up
+
+        // STOP JIGGLE ON CLICK
+        inboxIcon.addEventListener('click', function() {
+            this.classList.remove("jiggle-animation");
+            this.style.filter = "none";
+        });
+    }
+});
+
 function scrollToBottom() {
     const messagesContainer = document.querySelector(".messages");
     messagesContainer.scrollTop = messagesContainer.scrollHeight;

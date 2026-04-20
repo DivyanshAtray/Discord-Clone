@@ -291,11 +291,20 @@ def request_friend():
             else:
                 cursor.execute('UPDATE friends SET incoming_request = ? WHERE user_id = ?', (str(user_id), friend_id))
         conn.commit()
+        # --- NEW: LIVE NOTIFICATION ---
+        # This sends the data to the recipient's unique Socket.IO room
+        socketio.emit('new_friend_request', {
+            'sender_id': user_id,
+            'sender_username': session['username']
+        }, room=str(friend_id))
+        # ------------------------------
+
         conn.close()
         return jsonify({"status": "Friend request sent successfully."}), 200
 
     except Exception as e:
-        conn.close()
+        if conn:
+            conn.close()
         print(e)
         return jsonify({"error": str(e)}), 500
 
@@ -312,29 +321,42 @@ def add_friend():
     if not friend_id:
         return jsonify({"error": "Friend ID is required"}), 400
 
+    # FIX FOR VS CODE: Initialize variables before the 'try' block
+    user_id = None
+    my_username = None
+    my_pfp_blob = None
+    friend_username = None
+    friend_pfp_blob = None
+
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
 
-        # Get the current user's ID
-        cursor.execute('SELECT id FROM users WHERE username = ?', (session['username'],))
-        user_id = cursor.fetchone()
-        if not user_id:
+        # 1. Get the current user's ID, username, and PFP
+        cursor.execute('SELECT id, username, image1 FROM users WHERE username = ?', (session['username'],))
+        user_row = cursor.fetchone()
+        if not user_row:
             conn.close()
             return jsonify({"error": "User not found"}), 404
-        user_id = user_id[0]
+        
+        user_id = user_row[0]
+        my_username = user_row[1]
+        my_pfp_blob = user_row[2]
 
-        # Check if the friend exists
-        cursor.execute('SELECT id FROM users WHERE id = ?', (friend_id,))
-        if not cursor.fetchone():
+        # 2. Get the friend's username and PFP
+        cursor.execute('SELECT username, image1 FROM users WHERE id = ?', (friend_id,))
+        friend_row = cursor.fetchone()
+        if not friend_row:
             conn.close()
             return jsonify({"error": "Friend not found"}), 404
+        
+        friend_username = friend_row[0]
+        friend_pfp_blob = friend_row[1]
 
         # Get the current user's friend data
         cursor.execute('SELECT friends, incoming_request FROM friends WHERE user_id = ?', (user_id,))
         user_data = cursor.fetchone()
         if not user_data:
-            # If no friend data exists, initialize it
             cursor.execute('INSERT INTO friends (user_id, friends, incoming_request) VALUES (?, ?, ?)', (user_id, '', ''))
             conn.commit()
             friends = []
@@ -343,7 +365,6 @@ def add_friend():
             friends = user_data[0].split(",") if user_data[0] else []
             incoming_requests = user_data[1].split(",") if user_data[1] else []
 
-        # Check if the friend_id is in incoming requests
         if str(friend_id) not in incoming_requests:
             conn.close()
             return jsonify({"error": "No friend request from this user"}), 400
@@ -351,19 +372,18 @@ def add_friend():
         # Add friend to the current user's friend list
         if str(friend_id) not in friends:
             friends.append(str(friend_id))
-        friends = [f for f in friends if f]  # Remove empty strings
+        friends = [f for f in friends if f]  
         cursor.execute('UPDATE friends SET friends = ? WHERE user_id = ?', (",".join(friends), user_id))
 
         # Remove the friend request from incoming requests
         incoming_requests.remove(str(friend_id))
-        incoming_requests = [r for r in incoming_requests if r]  # Remove empty strings
+        incoming_requests = [r for r in incoming_requests if r]  
         cursor.execute('UPDATE friends SET incoming_request = ? WHERE user_id = ?', (",".join(incoming_requests) if incoming_requests else '', user_id))
 
         # Add the current user to the friend's friend list
         cursor.execute('SELECT friends FROM friends WHERE user_id = ?', (friend_id,))
         friend_data = cursor.fetchone()
         if not friend_data:
-            # If no friend data exists for the friend, initialize it
             cursor.execute('INSERT INTO friends (user_id, friends, incoming_request) VALUES (?, ?, ?)', (friend_id, '', ''))
             conn.commit()
             friend_friends = []
@@ -372,10 +392,31 @@ def add_friend():
 
         if str(user_id) not in friend_friends:
             friend_friends.append(str(user_id))
-        friend_friends = [f for f in friend_friends if f]  # Remove empty strings
+        friend_friends = [f for f in friend_friends if f]  
         cursor.execute('UPDATE friends SET friends = ? WHERE user_id = ?', (",".join(friend_friends) if friend_friends else '', friend_id))
 
+        # Save to database
         conn.commit()
+
+        # --- LIVE SIDEBAR UPDATE ---
+        import base64
+        my_pfp = base64.b64encode(my_pfp_blob).decode('utf-8') if my_pfp_blob else None
+        friend_pfp = base64.b64encode(friend_pfp_blob).decode('utf-8') if friend_pfp_blob else None
+
+        # Tell YOUR browser to add the friend
+        socketio.emit('friend_added', {
+            'id': friend_id,
+            'username': friend_username,
+            'pfp': friend_pfp
+        }, room=str(user_id))
+
+        # Tell the FRIEND'S browser to add you
+        socketio.emit('friend_added', {
+            'id': user_id,
+            'username': my_username,
+            'pfp': my_pfp
+        }, room=str(friend_id))
+
     except Exception as e:
         conn.close()
         print(f"Error in /add_friend: {e}")
