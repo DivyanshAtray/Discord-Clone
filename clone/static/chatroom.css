@@ -580,6 +580,7 @@ textarea {
     font-optical-sizing: auto;
     font-weight: 400;
     font-style: normal;
+    animation: fadeIn 0.5s ease-out forwards;
 
     font-size: 16px;
     /* overflow-x: scroll; */
@@ -709,6 +710,8 @@ span.unread::after {
 
 .user-info {
     height: 53%;
+    margin: 0;
+    padding: 0;
 }
 
 /* Split rightbar into two equal horizontal sections */
@@ -871,6 +874,10 @@ span.unread::after {
         width: calc(100% - 550px);
         overflow-x: hidden;
     }
+
+    .messages{
+        width: 100%;
+    }
 }
 
 @media (max-width: 1275px) {
@@ -1029,7 +1036,7 @@ span.unread::after {
         left: -300px;
         /* Start hidden on left */
         width: 300px;
-        height: 100vh;
+        height: 99dvh;
         transition: transform 0.3s ease;
         z-index: 999;
     }
@@ -1140,14 +1147,20 @@ span.unread::after {
     }
     .user-banner{
         width: 80%;
-        
+        display: none;
         margin: 0;
         padding: 0;
 
     }
 
     .user-info p{
-        font-size: small;
+        font-size: medium;
+    }
+    .user-info{
+        height: 45%;
+    }
+    .friend-info{
+        height: 55%;
     }
     .friend-info p{
         font-size: medium;
